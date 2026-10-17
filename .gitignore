@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.local
+.DS_Store
+.pnpm-store
+*.tsbuildinfo
+.dayflow-server*.log
