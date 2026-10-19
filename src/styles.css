@@ -520,7 +520,7 @@ a {
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
-  align-items: start;
+  align-items: stretch;
   gap: 18px;
 }
 
@@ -1123,6 +1123,8 @@ a {
 }
 
 .pool-card {
+  display: flex;
+  flex-direction: column;
   padding: 20px;
 }
 
@@ -1173,6 +1175,7 @@ a {
 
 .pool-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 6px;
 }
