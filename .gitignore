@@ -6,3 +6,4 @@ dist
 .pnpm-store
 *.tsbuildinfo
 .dayflow-server*.log
+.vercel

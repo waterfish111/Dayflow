@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node server/index.mjs",
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",

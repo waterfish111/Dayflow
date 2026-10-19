@@ -1,0 +1,10 @@
+{
+  "framework": "vite",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/ai/parse.js": {
+      "maxDuration": 60
+    }
+  }
+}

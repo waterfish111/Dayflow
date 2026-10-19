@@ -39,6 +39,21 @@ pnpm build
 pnpm preview
 ```
 
+## 部署到 Vercel
+
+项目已经包含 Vercel Serverless Function：
+
+- 前端由 Vite 构建到 `dist`
+- `api/ai/parse.js` 提供 `/api/ai/parse`
+- `vercel.json` 指定构建命令和 60 秒函数超时
+- DeepSeek Key 仍然由前端设置页保存到本机，并通过请求头传给函数；不需要把 Key 配进 Vercel 环境变量
+
+在 Vercel 控制台导入 GitHub 仓库 `workdaily` 后，使用默认的 pnpm 构建即可。部署完成后用手机 Chrome 打开 HTTPS 地址，测试 PWA 安装、Key 填写和 `/api/health`。
+
+如果构建环境没有自动识别 pnpm，构建命令保持 `pnpm build`，输出目录保持 `dist`。
+
+详细的导入、构建和验证步骤见 [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md)。
+
 ## 配置 DeepSeek
 
 打开应用右上角「设置」，在 DeepSeek 区域填入使用者自己的 API Key，然后保存。
