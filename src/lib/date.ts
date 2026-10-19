@@ -11,13 +11,13 @@ export const WEEKDAYS_CN = [
 ] as const;
 
 export const WEEKDAYS_SHORT_CN = [
-  "日",
-  "一",
-  "二",
-  "三",
-  "四",
-  "五",
-  "六",
+  "周日",
+  "周一",
+  "周二",
+  "周三",
+  "周四",
+  "周五",
+  "周六",
 ] as const;
 
 export function pad(value: number): string {
