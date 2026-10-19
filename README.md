@@ -66,7 +66,9 @@ pnpm preview
 ## 目录
 
 ```text
-server/index.mjs          Express + Vite 中间件 + DeepSeek 代理
+server/index.mjs          本地 Express + Vite 中间件
+server/ai.mjs             本地与 Vercel 共用的 DeepSeek 解析逻辑
+api/                      Vercel Serverless Functions
 src/App.tsx               应用状态和完整业务闭环
 src/types.ts              任务、日程、设置、AI 草案的数据模型
 src/lib/date.ts           日期和时间计算
@@ -76,6 +78,7 @@ src/lib/notifications.ts  通知权限、每日汇总和提前提醒
 src/components/           日历、待办池、编辑器、设置、草案确认
 public/                   PWA manifest、service worker、图标
 docs/LEARNING.md          项目学习笔记
+docs/PHASE1_LEARNING_MANUAL.md  阶段一部署学习手册
 ```
 
 ## 当前边界
@@ -87,4 +90,4 @@ docs/LEARNING.md          项目学习笔记
 - 分享、统计报表、任务拆分/子任务、系统日历双向同步、iOS 版本。
 - 重复任务会在保存时展开未来 42 天；修改其中一次不会同步整组。
 
-下一阶段建议先接 Supabase 登录和数据同步，再补 Web Push 或 Capacitor 封装。具体学习路线见 [docs/LEARNING.md](docs/LEARNING.md)。
+下一阶段建议先接 Supabase 登录和数据同步，再补 Web Push 或 Capacitor 封装。具体学习路线见 [docs/LEARNING.md](docs/LEARNING.md)，阶段一的部署复盘见 [docs/PHASE1_LEARNING_MANUAL.md](docs/PHASE1_LEARNING_MANUAL.md)。
