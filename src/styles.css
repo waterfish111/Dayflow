@@ -1126,6 +1126,23 @@ a {
   display: flex;
   flex-direction: column;
   padding: 20px;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.pool-card.is-drop-target {
+  border-color: #8fb89a;
+  background: #f3faf1;
+  box-shadow:
+    0 0 0 3px rgba(47, 107, 79, 0.1),
+    var(--shadow-soft);
+}
+
+.pool-card.is-drop-target .pool-intro {
+  color: var(--accent-deep);
+  font-weight: 600;
 }
 
 .pool-head {
@@ -1550,6 +1567,13 @@ a {
   gap: 7px;
 }
 
+.editor-actions-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
 .settings-body {
   display: flex;
   flex-direction: column;
@@ -1807,6 +1831,11 @@ a {
 .draft-kind--event {
   background: #eaf1eb;
   color: var(--accent-deep);
+}
+
+.draft-kind--pool {
+  background: #f7f0e2;
+  color: #8a6c32;
 }
 
 .confidence-badge {

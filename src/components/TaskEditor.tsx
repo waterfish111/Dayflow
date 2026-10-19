@@ -23,6 +23,7 @@ export function TaskEditor({
   onClose,
   onSave,
   onDelete,
+  onUnschedule,
 }: {
   open: boolean;
   task: ScheduleItem | null;
@@ -32,6 +33,7 @@ export function TaskEditor({
   onClose: () => void;
   onSave: (task: ScheduleItem) => void;
   onDelete: (taskId: string) => void;
+  onUnschedule: (taskId: string) => void;
 }) {
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<ItemKind>("task");
@@ -414,22 +416,32 @@ export function TaskEditor({
         ) : null}
 
         <div className="editor-actions field--full">
-          {task ? (
-            <button
-              type="button"
-              className="button button--danger-ghost"
-              onClick={() => {
-                if (window.confirm(`删除「${task.title}」？`)) {
-                  onDelete(task.id);
-                }
-              }}
-            >
-              <Icon name="trash" size={16} />
-              删除
-            </button>
-          ) : (
-            <span />
-          )}
+          <div className="editor-actions-left">
+            {task ? (
+              <button
+                type="button"
+                className="button button--danger-ghost"
+                onClick={() => {
+                  if (window.confirm(`删除「${task.title}」？`)) {
+                    onDelete(task.id);
+                  }
+                }}
+              >
+                <Icon name="trash" size={16} />
+                删除
+              </button>
+            ) : null}
+            {task?.date && task.kind === "task" && !task.locked ? (
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={() => onUnschedule(task.id)}
+              >
+                <Icon name="inbox" size={16} />
+                移入待办池
+              </button>
+            ) : null}
+          </div>
           <div className="editor-actions-right">
             <button type="button" className="button button--ghost" onClick={onClose}>
               取消

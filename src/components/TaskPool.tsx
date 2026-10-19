@@ -13,6 +13,7 @@ export function TaskPool({
   onScheduleOne,
   onAutoSchedule,
   onToggleComplete,
+  onUnscheduleTask,
 }: {
   tasks: ScheduleItem[];
   settings: Settings;
@@ -21,8 +22,10 @@ export function TaskPool({
   onScheduleOne: (taskId: string) => void;
   onAutoSchedule: () => void;
   onToggleComplete: (taskId: string) => void;
+  onUnscheduleTask: (taskId: string) => void;
 }) {
   const [filter, setFilter] = useState("全部");
+  const [isDragOver, setIsDragOver] = useState(false);
   const filtered = useMemo(() => {
     const list =
       filter === "全部"
@@ -32,7 +35,25 @@ export function TaskPool({
   }, [tasks, filter]);
 
   return (
-    <aside className="pool-card">
+    <aside
+      className={`pool-card ${isDragOver ? "is-drop-target" : ""}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        setIsDragOver(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsDragOver(false);
+        }
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setIsDragOver(false);
+        const taskId = event.dataTransfer.getData("text/dayflow-task");
+        if (taskId) onUnscheduleTask(taskId);
+      }}
+    >
       <div className="pool-head">
         <div>
           <div className="calendar-eyebrow">INBOX</div>
@@ -42,7 +63,9 @@ export function TaskPool({
       </div>
 
       <p className="pool-intro">
-        先记下来，再决定放进哪一天。未锁定的任务可以被 AI 建议移动。
+        {isDragOver
+          ? "松开鼠标，把任务移入待办池。"
+          : "先记下来，再决定放进哪一天。也可以把日历里的任务拖进来。"}
       </p>
 
       <div className="pool-toolbar">

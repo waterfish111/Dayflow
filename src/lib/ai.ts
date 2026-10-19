@@ -8,6 +8,7 @@ function sanitizeItem(item: ParsedItem): ParsedItem {
   return {
     ...item,
     title: String(item.title || "未命名任务").slice(0, 160),
+    pool: Boolean(item.pool),
     date: item.date && DATE_RE.test(item.date) ? item.date : undefined,
     start: item.start && TIME_RE.test(item.start) ? item.start : undefined,
     end: item.end && TIME_RE.test(item.end) ? item.end : undefined,

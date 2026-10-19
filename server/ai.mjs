@@ -39,6 +39,7 @@ export function buildPrompt(payload) {
 9. 优先级只能是 "high"、"medium"、"low"。用户没有说明时用 "medium"。
 10. 置信度 confidence 是 0 到 1 的数字；信息不完整时降低。
 11. recurrence 可选：{"type":"none"}、{"type":"daily"}、{"type":"weekdays"}、{"type":"weekly","weekdays":[1,3,5]}、{"type":"interval","intervalDays":2}；可加 "until":"YYYY-MM-DD"。
+12. 如果用户明确说“加入待办池”“放入待办池”“先记到待办池”等，该 item 必须设置 "pool": true，并且不要给 date、start、end；estimatedMinutes 可以保留。明确指定待办池时，不要再把这件事排进日历。
 
 输出结构：
 {
@@ -46,6 +47,7 @@ export function buildPrompt(payload) {
     {
       "title": "会议名称",
       "kind": "event",
+      "pool": false,
       "date": "2026-10-21",
       "start": "14:00",
       "end": "16:00",
@@ -89,6 +91,7 @@ export function normalizeAiResult(value) {
       return {
         title: String(item.title || "未命名任务").slice(0, 160),
         kind,
+        pool: Boolean(item.pool),
         date: typeof item.date === "string" ? item.date : undefined,
         start: typeof item.start === "string" ? item.start : undefined,
         end: typeof item.end === "string" ? item.end : undefined,

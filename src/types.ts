@@ -77,6 +77,7 @@ export type AppState = {
 export type ParsedItem = {
   title: string;
   kind: ItemKind;
+  pool?: boolean;
   date?: string;
   start?: string;
   end?: string;

@@ -103,6 +103,11 @@ export function DraftReview({
                       <span className={`draft-kind draft-kind--${item.kind}`}>
                         {item.kind === "event" ? "固定日程" : "任务"}
                       </span>
+                      {item.pool ? (
+                        <span className="draft-kind draft-kind--pool">
+                          待办池
+                        </span>
+                      ) : null}
                       {lowConfidence ? (
                         <span className="confidence-badge">需确认</span>
                       ) : (
@@ -114,7 +119,9 @@ export function DraftReview({
                     <div className="draft-item-meta">
                       <span>
                         <Icon name="calendar" size={13} />
-                        {item.date
+                        {item.pool
+                          ? "待办池 · 不排期"
+                          : item.date
                           ? `${item.date}${item.start ? ` ${item.start}` : ""}${
                               item.end ? `–${item.end}` : ""
                             }`

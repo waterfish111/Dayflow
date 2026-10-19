@@ -249,6 +249,45 @@ export default function App() {
     }
   };
 
+  const handleUnscheduleTask = (taskId: string) => {
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    if (task.kind === "event") {
+      showToast("固定日程不能移入待办池", "info");
+      return;
+    }
+    if (task.locked) {
+      showToast("这件事已锁定，先解锁才能移入待办池", "info");
+      return;
+    }
+
+    const estimatedMinutes =
+      task.start && task.end
+        ? durationBetween(task.start, task.end)
+        : task.estimatedMinutes;
+    const now = new Date().toISOString();
+    setState((previous) => ({
+      ...previous,
+      tasks: previous.tasks.map((item) =>
+        item.id === taskId
+          ? {
+              ...item,
+              date: undefined,
+              start: undefined,
+              end: undefined,
+              preferredStart: undefined,
+              estimatedMinutes,
+              updatedAt: now,
+            }
+          : item,
+      ),
+      updatedAt: now,
+    }));
+    setEditorOpen(false);
+    setEditorTask(null);
+    showToast("已移入待办池");
+  };
+
   const handleAutoSchedule = () => {
     const ids = poolTasks.map((task) => task.id);
     if (ids.length === 0) {
@@ -339,6 +378,7 @@ export default function App() {
 
     for (const item of selected) {
       if (
+        !item.pool &&
         item.kind === "event" &&
         (!item.date || !item.start || !item.end)
       ) {
@@ -354,21 +394,27 @@ export default function App() {
     }
 
     const now = new Date().toISOString();
-    const newTasks: ScheduleItem[] = valid.map((item) => {
-      const start = item.start;
-      const end = item.end;
+    const newTasks: ScheduleItem[] = [];
+    const poolTaskIds = new Set<string>();
+
+    for (const item of valid) {
+      const id = createId("task");
+      const forcePool = Boolean(item.pool);
+      if (forcePool) poolTaskIds.add(id);
+      const start = forcePool ? undefined : item.start;
+      const end = forcePool ? undefined : item.end;
       const category =
         item.category && state.settings.categories.includes(item.category)
           ? item.category
           : state.settings.categories[0] ?? "其他";
-      return {
-        id: createId("task"),
+      newTasks.push({
+        id,
         title: item.title.trim() || "未命名任务",
-        kind: item.kind,
-        date: item.date,
+        kind: forcePool ? "task" : item.kind,
+        date: forcePool ? undefined : item.date,
         start,
         end,
-        preferredStart: !item.date && start ? start : undefined,
+        preferredStart: !forcePool && !item.date && start ? start : undefined,
         estimatedMinutes:
           item.estimatedMinutes ??
           (start && end ? Math.max(15, durationBetween(start, end)) : 60),
@@ -378,7 +424,11 @@ export default function App() {
         notes: item.notes,
         location: item.location,
         link: item.link,
-        locked: item.kind === "event" ? true : Boolean(item.locked),
+        locked: forcePool
+          ? false
+          : item.kind === "event"
+            ? true
+            : Boolean(item.locked),
         completed: false,
         recurrence:
           item.recurrence && item.recurrence.type !== "none"
@@ -387,11 +437,13 @@ export default function App() {
         source: "ai",
         createdAt: now,
         updatedAt: now,
-      };
-    });
+      });
+    }
 
     const schedulingIds = newTasks
-      .filter((task) => !isTaskScheduled(task))
+      .filter(
+        (task) => !poolTaskIds.has(task.id) && !isTaskScheduled(task),
+      )
       .map((task) => task.id);
     const result = autoSchedule(
       [...state.tasks, ...newTasks],
@@ -436,6 +488,12 @@ export default function App() {
         `计划已写入，${result.warnings.length} 项暂时留在待办池`,
         "error",
       );
+    } else if (poolTaskIds.size > 0 && newTasks.length > poolTaskIds.size) {
+      showToast(
+        `已写入日历，${poolTaskIds.size} 项放入待办池`,
+      );
+    } else if (poolTaskIds.size > 0) {
+      showToast("已加入待办池");
     } else {
       showToast("计划已写入日历");
     }
@@ -565,6 +623,7 @@ export default function App() {
             onScheduleOne={handleScheduleOne}
             onAutoSchedule={handleAutoSchedule}
             onToggleComplete={handleToggleComplete}
+            onUnscheduleTask={handleUnscheduleTask}
           />
         </div>
 
@@ -590,6 +649,7 @@ export default function App() {
         }}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
+        onUnschedule={handleUnscheduleTask}
       />
 
       <SettingsPanel
