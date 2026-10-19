@@ -375,6 +375,17 @@ export function MonthView({
                 isToday(date) ? "is-today" : ""
               }`}
               onClick={() => onSelectDay(key)}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const taskId = event.dataTransfer.getData(
+                  "text/dayflow-task",
+                );
+                if (taskId) onMoveTask(taskId, key);
+              }}
             >
               <span className="month-date">{date.getDate()}</span>
               <div className="month-items">

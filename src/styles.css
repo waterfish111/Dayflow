@@ -1210,6 +1210,14 @@ a {
     background 140ms ease;
 }
 
+.pool-item[draggable="true"] {
+  cursor: grab;
+}
+
+.pool-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 .pool-item:hover {
   border-color: #ccd9cb;
   background: #fff;

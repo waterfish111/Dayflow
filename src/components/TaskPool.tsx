@@ -65,7 +65,7 @@ export function TaskPool({
       <p className="pool-intro">
         {isDragOver
           ? "松开鼠标，把任务移入待办池。"
-          : "先记下来，再决定放进哪一天。也可以把日历里的任务拖进来。"}
+          : "先记下来，再决定放进哪一天。日历和待办池之间可以互相拖拽。"}
       </p>
 
       <div className="pool-toolbar">
@@ -115,6 +115,15 @@ export function TaskPool({
             <div
               key={task.id}
               className={`pool-item ${task.completed ? "is-completed" : ""}`}
+              draggable={!task.locked}
+              onDragStart={(event) => {
+                if (task.locked) {
+                  event.preventDefault();
+                  return;
+                }
+                event.dataTransfer.setData("text/dayflow-task", task.id);
+                event.dataTransfer.effectAllowed = "move";
+              }}
               onClick={() => onEditTask(task)}
               role="button"
               tabIndex={0}

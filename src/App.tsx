@@ -219,6 +219,36 @@ export default function App() {
       }));
       showToast(`已移动到 ${start}`);
     } else {
+      if (!task.start || !task.end) {
+        const seededTasks = state.tasks.map((item) =>
+          item.id === taskId
+            ? { ...item, date: dateKey, updatedAt: now }
+            : item,
+        );
+        const result = autoSchedule(seededTasks, state.settings, {
+          taskIds: [taskId],
+          horizonDays: 1,
+        });
+        const tasks =
+          result.warnings.length > 0
+            ? result.tasks.map((item) =>
+                item.id === taskId
+                  ? { ...item, date: undefined, updatedAt: now }
+                  : item,
+              )
+            : result.tasks;
+        setState((previous) => ({
+          ...previous,
+          tasks,
+          updatedAt: now,
+        }));
+        if (result.warnings.length > 0) {
+          showToast(result.warnings[0].message, "error");
+        } else {
+          showToast(`已排入 ${dateKey}`);
+        }
+        return;
+      }
       setState((previous) => ({
         ...previous,
         tasks: previous.tasks.map((item) =>
