@@ -140,6 +140,7 @@ CI 在每次 push 和 PR 上执行 `typecheck → test → build`。
 - [阶段一部署专题：Vercel 与 esbuild 问题](docs/PHASE1_LEARNING_MANUAL.md)
 - [代码阅读笔记](docs/LEARNING.md)
 - [Vercel 部署操作步骤](docs/DEPLOY_VERCEL.md)
+- [面试材料包：简历写法、90 秒讲述稿与预判问答](docs/INTERVIEW.md)
 
 ## 项目历程
 
@@ -151,6 +152,7 @@ CI 在每次 push 和 PR 上执行 `typecheck → test → build`。
 | 2026-10-19 | 修复 pnpm / esbuild 安装脚本问题（`ERR_PNPM_IGNORED_BUILDS`） |
 | 2026-10-19 | 完成线上健康检查；发现手机直连 `vercel.app` 受网络环境影响 |
 | 2026-11-08 | 补充 MIT 协议、Vitest 单元测试与 GitHub Actions |
+| 2026-11-09 | 补三张真实界面截图、仓库 About 与 `v0.2.0` Release |
 
 ## 下一步
 
