@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
-import { createServer as createViteServer } from "vite";
 import {
   AiError,
   bodyFromRequest,
@@ -47,6 +46,8 @@ if (process.env.NODE_ENV === "production") {
     res.sendFile(path.join(dist, "index.html"));
   });
 } else {
+  // 只有本地开发才需要 vite（devDependency）。生产环境不装 devDependencies 也能启动。
+  const { createServer: createViteServer } = await import("vite");
   const vite = await createViteServer({
     root,
     server: { middlewareMode: true },

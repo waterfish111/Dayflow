@@ -140,6 +140,7 @@ CI 在每次 push 和 PR 上执行 `typecheck → test → build`。
 - [阶段一部署专题：Vercel 与 esbuild 问题](docs/PHASE1_LEARNING_MANUAL.md)
 - [代码阅读笔记](docs/LEARNING.md)
 - [Vercel 部署操作步骤](docs/DEPLOY_VERCEL.md)
+- [云服务器部署（IP 直连，免备案）](docs/DEPLOY_VPS.md)
 - [面试材料包：简历写法、90 秒讲述稿与预判问答](docs/INTERVIEW.md)
 
 ## 项目历程

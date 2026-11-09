@@ -1,0 +1,30 @@
+[Unit]
+Description=Dayflow (PWA + DeepSeek proxy)
+Documentation=https://github.com/waterfish111/Dayflow
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dayflow
+Group=dayflow
+WorkingDirectory=/opt/dayflow
+Environment=NODE_ENV=production
+Environment=PORT=80
+# 可选：在这里放 DEEPSEEK_API_KEY 会让所有访客共用同一个 Key，谨慎开启
+EnvironmentFile=-/opt/dayflow/.env
+ExecStart=/usr/local/bin/node server/index.mjs
+Restart=always
+RestartSec=3
+
+# 非 root 用户监听 80 端口
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/dayflow
+
+[Install]
+WantedBy=multi-user.target

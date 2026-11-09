@@ -7,3 +7,8 @@ dist
 *.tsbuildinfo
 .dayflow-server*.log
 .vercel
+
+# 本地部署/截图脚手架
+.shots
+.deploy
+.verify
