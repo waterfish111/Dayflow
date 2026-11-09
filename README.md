@@ -11,14 +11,9 @@
 
 在线演示：<https://dayflow-eta-teal.vercel.app>（部分中国大陆网络无法直连 `vercel.app`，详见[已知限制](#已知限制)）
 
-<!--
-界面预览：把三张截图放到 docs/screenshots/ 后，删掉这段注释即可。
-建议尺寸 390×844（手机）或 1280×720（桌面），文件控制在 300 KB 以内。
-
 | 自然语言 → 草案确认 | 周视图自动排期 | 手机端 390px |
 |---|---|---|
-| ![草案确认](docs/screenshots/01-draft.png) | ![周视图](docs/screenshots/02-week.png) | ![手机端](docs/screenshots/03-mobile.png) |
--->
+| <img src="docs/screenshots/01-draft.png" width="300" alt="草案确认：4 条解析结果，低置信度条目默认不勾选"> | <img src="docs/screenshots/02-week.png" width="420" alt="周视图：自动排期结果与待办池"> | <img src="docs/screenshots/03-mobile.png" width="150" alt="390px 手机端布局"> |
 
 ## 它解决什么问题
 
