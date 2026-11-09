@@ -11,7 +11,9 @@
     "dev": "node server/index.mjs",
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "preview": "cross-env NODE_ENV=production node server/index.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
@@ -27,6 +29,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "cross-env": "^7.0.3",
     "typescript": "^5.7.2",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vitest": "^3.2.4"
   }
 }
