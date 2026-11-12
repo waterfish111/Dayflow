@@ -21,6 +21,7 @@ export type IconName =
   | "refresh"
   | "alert"
   | "download"
+  | "upload"
   | "key"
   | "target"
   | "inbox"
@@ -180,6 +181,12 @@ export function Icon({ name, size = 20, ...props }: Props) {
       return (
         <svg {...common}>
           <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+        </svg>
+      );
+    case "upload":
+      return (
+        <svg {...common}>
+          <path d="M12 16V4M7 9l5-5 5 5M5 20h14" />
         </svg>
       );
     case "key":

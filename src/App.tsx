@@ -14,7 +14,13 @@ import type {
   Settings,
   TimeGranularity,
 } from "./types";
-import { loadDeepSeekKey, loadState, saveDeepSeekKey, saveState } from "./data/storage";
+import {
+  loadDeepSeekKey,
+  loadState,
+  parseImportedState,
+  saveDeepSeekKey,
+  saveState,
+} from "./data/storage";
 import { parseWithAI } from "./lib/ai";
 import {
   checkReminders,
@@ -605,6 +611,32 @@ export default function App() {
     showToast("已导出 JSON 备份");
   };
 
+  const handleImport = async (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("文件太大了（超过 2MB），这不是 Dayflow 的备份吧", "error");
+      return;
+    }
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      showToast("读取文件失败，换一个文件试试", "error");
+      return;
+    }
+    const outcome = parseImportedState(text);
+    if (!outcome.ok) {
+      showToast(`导入失败：${outcome.error}`, "error");
+      return;
+    }
+    setState(outcome.state);
+    setSettingsOpen(false);
+    showToast(
+      outcome.skipped
+        ? `已导入 ${outcome.taskCount} 个任务，跳过 ${outcome.skipped} 条无效数据`
+        : `已导入 ${outcome.taskCount} 个任务`,
+    );
+  };
+
   return (
     <div className="app-shell">
       <div className="ambient ambient--one" />
@@ -719,6 +751,7 @@ export default function App() {
         onSaveKey={handleSaveKey}
         onEnableNotifications={enableNotifications}
         onExport={handleExport}
+        onImport={handleImport}
       />
 
       <DraftReview

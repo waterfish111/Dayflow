@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   CalendarView,
   DayTemplate,
@@ -63,6 +63,7 @@ export function SettingsPanel({
   onSaveKey,
   onEnableNotifications,
   onExport,
+  onImport,
 }: {
   open: boolean;
   settings: Settings;
@@ -73,11 +74,13 @@ export function SettingsPanel({
   onSaveKey: (key: string) => void;
   onEnableNotifications: () => void;
   onExport: () => void;
+  onImport: (file: File) => void;
 }) {
   const [draft, setDraft] = useState<Settings>(settings);
   const [keyDraft, setKeyDraft] = useState(deepseekKey);
   const [showKey, setShowKey] = useState(false);
   const [newCategory, setNewCategory] = useState("");
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -446,17 +449,45 @@ export function SettingsPanel({
           <div className="settings-section-head">
             <div>
               <h3>数据</h3>
-              <p>当前版本用浏览器本地存储，导出后可用于备份或迁移。</p>
+              <p>
+                当前版本用浏览器本地存储。导出的 JSON 可以备份、迁移到别的设备或域名；
+                导入会覆盖当前任务与设置。
+              </p>
             </div>
-            <button
-              type="button"
-              className="button button--ghost button--small"
-              onClick={onExport}
-            >
-              <Icon name="download" size={15} />
-              导出 JSON
-            </button>
+            <div className="settings-data-actions">
+              <button
+                type="button"
+                className="button button--ghost button--small"
+                onClick={onExport}
+              >
+                <Icon name="download" size={15} />
+                导出 JSON
+              </button>
+              <button
+                type="button"
+                className="button button--ghost button--small"
+                onClick={() => importInputRef.current?.click()}
+              >
+                <Icon name="upload" size={15} />
+                导入 JSON
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="visually-hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) onImport(file);
+                }}
+              />
+            </div>
           </div>
+          <p className="settings-muted">
+            换域名或换设备前先导出，导入后任务、作息模板、分类都会恢复；DeepSeek Key
+            不写进备份，需要重新填。
+          </p>
         </section>
       </div>
 

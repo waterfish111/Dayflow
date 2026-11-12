@@ -7,12 +7,22 @@ import { AiError, resolveKey } from "./ai.mjs";
 import { consumeQuota } from "./ratelimit.mjs";
 
 const DEFAULT_DAILY_LIMIT = 20;
+// 全站每日总次数：防止有人换 IP 刷爆共享 Key。
+// 0 表示不设总上限（自己家里用可以关掉）。
+const DEFAULT_GLOBAL_LIMIT = 200;
 
 export function demoDailyLimit(env = process.env) {
   const value = Number(env.DEMO_DAILY_LIMIT ?? DEFAULT_DAILY_LIMIT);
   return Number.isFinite(value) && value > 0
     ? Math.floor(value)
     : DEFAULT_DAILY_LIMIT;
+}
+
+export function demoGlobalLimit(env = process.env) {
+  const value = Number(env.DEMO_GLOBAL_LIMIT ?? DEFAULT_GLOBAL_LIMIT);
+  return Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : DEFAULT_GLOBAL_LIMIT;
 }
 
 export function hasDemoKey(env = process.env) {
@@ -22,7 +32,11 @@ export function hasDemoKey(env = process.env) {
 }
 
 export function demoStatus(env = process.env) {
-  return { demo: hasDemoKey(env), demoLimit: demoDailyLimit(env) };
+  return {
+    demo: hasDemoKey(env),
+    demoLimit: demoDailyLimit(env),
+    demoGlobalLimit: demoGlobalLimit(env),
+  };
 }
 
 function clientIp(req, env) {
@@ -49,12 +63,24 @@ export function resolveRequestKey(req, env = process.env) {
   }
 
   const limit = demoDailyLimit(env);
-  const quota = consumeQuota(clientIp(req, env), limit);
+  const quota = consumeQuota(`ip:${clientIp(req, env)}`, limit);
   if (!quota.allowed) {
     throw new AiError(
       429,
       `今天的演示额度用完了（每天 ${quota.limit} 次）。打开设置填入你自己的 DeepSeek Key，可以继续不限量使用。`,
     );
+  }
+
+  // 第二道闸：全站每天的总次数，防止换 IP 刷额度。
+  const globalLimit = demoGlobalLimit(env);
+  if (globalLimit > 0) {
+    const globalQuota = consumeQuota("global", globalLimit);
+    if (!globalQuota.allowed) {
+      throw new AiError(
+        429,
+        "这个站点今天的演示额度已经全部用完了，明天再来；也可以打开设置填自己的 DeepSeek Key。",
+      );
+    }
   }
 
   return { key, isDemo: true, remaining: quota.remaining, limit: quota.limit };

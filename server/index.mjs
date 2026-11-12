@@ -19,6 +19,12 @@ const port = Number(process.env.PORT || 5173);
 
 app.use(express.json({ limit: "1mb" }));
 
+// 接口响应不进任何缓存：里面带着演示剩余次数，缓存会串号。
+app.use("/api", (_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
 app.post("/api/ai/parse", async (req, res) => {
   try {
     const payload = bodyFromRequest(req.body);
