@@ -98,6 +98,8 @@ export type AiParseResult = {
   items: ParsedItem[];
   questions: string[];
   summary?: string;
+  /** 使用站点共享演示额度时，服务端会带回剩余次数 */
+  demo?: { remaining: number; limit: number };
 };
 
 export type DraftItem = ParsedItem & {

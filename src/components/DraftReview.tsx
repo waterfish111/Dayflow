@@ -1,8 +1,17 @@
-import { useEffect, useState } from "react";
-import type { DraftItem } from "../types";
-import { formatDeadline } from "../lib/date";
+import { useEffect, useMemo, useState } from "react";
+import type { DraftItem, ScheduleItem, Settings } from "../types";
+import {
+  durationBetween,
+  formatDeadline,
+  relativeDateLabel,
+} from "../lib/date";
+import { autoSchedule, isTaskScheduled } from "../lib/scheduler";
 import { Icon } from "./Icon";
 import { Modal, PriorityDot } from "./ui";
+
+type DemoInfo = { remaining: number; limit: number };
+
+type PreviewSlot = { date: string; start: string; end: string };
 
 export function DraftReview({
   open,
@@ -10,6 +19,9 @@ export function DraftReview({
   questions,
   summary,
   loading,
+  tasks,
+  settings,
+  demo,
   onToggle,
   onConfirm,
   onClose,
@@ -20,6 +32,9 @@ export function DraftReview({
   questions: string[];
   summary: string;
   loading: boolean;
+  tasks: ScheduleItem[];
+  settings: Settings;
+  demo: DemoInfo | null;
   onToggle: (draftId: string) => void;
   onConfirm: () => void;
   onClose: () => void;
@@ -27,6 +42,79 @@ export function DraftReview({
 }) {
   const [answer, setAnswer] = useState("");
   const selectedCount = items.filter((item) => item.selected).length;
+
+  // 真正写入时会调用一次 autoSchedule；这里用同样的参数先跑一遍，
+  // 把结果当「预计时间」显示给用户，确认前就能看到会排到哪。
+  const previews = useMemo(() => {
+    const result = new Map<string, PreviewSlot | null>();
+    const pending = items.filter(
+      (item) =>
+        item.selected &&
+        !item.pool &&
+        !(item.date && item.start && item.end),
+    );
+    if (pending.length === 0) return result;
+
+    const now = new Date().toISOString();
+    const pseudo: ScheduleItem[] = pending.map((item) => ({
+      id: `preview:${item.draftId}`,
+      title: item.title,
+      kind: item.kind,
+      date: item.date,
+      start: item.start,
+      end: item.end,
+      preferredStart: !item.date && item.start ? item.start : undefined,
+      estimatedMinutes:
+        item.estimatedMinutes ??
+        (item.start && item.end
+          ? Math.max(15, durationBetween(item.start, item.end))
+          : 60),
+      priority: item.priority,
+      category:
+        item.category && settings.categories.includes(item.category)
+          ? item.category
+          : settings.categories[0] ?? "其他",
+      deadline: item.deadline,
+      locked: false,
+      completed: false,
+      recurrence: undefined,
+      source: "ai",
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    const scheduled = autoSchedule([...tasks, ...pseudo], settings, {
+      taskIds: pseudo.map((task) => task.id),
+      horizonDays: 21,
+    });
+    const placed = new Map(scheduled.tasks.map((task) => [task.id, task]));
+
+    for (const task of pseudo) {
+      const next = placed.get(task.id);
+      result.set(
+        task.id.slice("preview:".length),
+        next && isTaskScheduled(next)
+          ? { date: next.date!, start: next.start!, end: next.end! }
+          : null,
+      );
+    }
+    return result;
+  }, [items, tasks, settings]);
+
+  const timeLabel = (item: DraftItem) => {
+    if (item.pool) return "待办池 · 不排期";
+    if (item.date) {
+      return `${item.date}${item.start ? ` ${item.start}` : ""}${
+        item.end ? `–${item.end}` : ""
+      }`;
+    }
+    if (item.kind === "event") return "固定日程缺少时间，确认时会跳过";
+    if (!item.selected) return "未选中，不会写入";
+    if (!previews.has(item.draftId)) return "由排期引擎安排";
+    const slot = previews.get(item.draftId);
+    if (!slot) return "暂时没有空档，会留在待办池";
+    return `预计 ${relativeDateLabel(slot.date)} ${slot.start}–${slot.end}`;
+  };
 
   useEffect(() => {
     if (open) setAnswer("");
@@ -119,13 +207,7 @@ export function DraftReview({
                     <div className="draft-item-meta">
                       <span>
                         <Icon name="calendar" size={13} />
-                        {item.pool
-                          ? "待办池 · 不排期"
-                          : item.date
-                          ? `${item.date}${item.start ? ` ${item.start}` : ""}${
-                              item.end ? `–${item.end}` : ""
-                            }`
-                          : "由排期引擎安排"}
+                        {timeLabel(item)}
                       </span>
                       {item.estimatedMinutes ? (
                         <span>
@@ -154,6 +236,7 @@ export function DraftReview({
       <div className="draft-actions">
         <span className="draft-selected">
           已选择 {selectedCount} / {items.length} 项
+          {demo ? ` · 演示额度剩余 ${demo.remaining} 次` : ""}
         </span>
         <div className="editor-actions-right">
           <button className="button button--ghost" onClick={onClose} disabled={loading}>

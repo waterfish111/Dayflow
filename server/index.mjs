@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 import {
   AiError,
   bodyFromRequest,
-  keyFromHeaders,
   parseSchedule,
 } from "./ai.mjs";
+import { demoStatus, resolveRequestKey } from "./demo.mjs";
 
 dotenv.config();
 
@@ -22,8 +22,21 @@ app.use(express.json({ limit: "1mb" }));
 app.post("/api/ai/parse", async (req, res) => {
   try {
     const payload = bodyFromRequest(req.body);
-    const key = keyFromHeaders(req.headers);
-    const result = await parseSchedule(payload, key);
+    // 先做不花钱的校验，避免空输入也扣掉演示额度。
+    const text = String(payload?.text ?? "").trim();
+    if (!text) throw new AiError(400, "请先输入一段计划。");
+    if (text.length > 4000) {
+      throw new AiError(400, "输入太长了，请控制在 4000 字以内。");
+    }
+
+    const access = resolveRequestKey(req);
+    const result = await parseSchedule(payload, access.key);
+    if (access.isDemo) {
+      return res.json({
+        ...result,
+        demo: { remaining: access.remaining, limit: access.limit },
+      });
+    }
     return res.json(result);
   } catch (error) {
     if (error instanceof AiError) {
@@ -36,7 +49,7 @@ app.post("/api/ai/parse", async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "dayflow" });
+  res.json({ ok: true, service: "dayflow", ...demoStatus() });
 });
 
 if (process.env.NODE_ENV === "production") {

@@ -65,6 +65,11 @@ export default function App() {
   const [draftSummary, setDraftSummary] = useState("");
   const [notificationState, setNotificationState] =
     useState<NotificationPermissionState>(() => notificationPermission());
+  const [demo, setDemo] = useState({ available: false, limit: 20 });
+  const [demoQuota, setDemoQuota] = useState<{
+    remaining: number;
+    limit: number;
+  } | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const plannerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -88,6 +93,26 @@ export default function App() {
 
   useEffect(() => {
     if (import.meta.env.PROD) registerServiceWorker();
+  }, []);
+
+  // 问一下服务端有没有开共享演示额度：有的话，前端就不再催用户填 Key。
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/health")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { demo?: boolean; demoLimit?: number } | null) => {
+        if (cancelled || !data) return;
+        setDemo({
+          available: Boolean(data.demo),
+          limit: Number(data.demoLimit) || 20,
+        });
+      })
+      .catch(() => {
+        // 静态托管（没有后端）时静默失败，走原来的「填 Key」路径。
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -370,6 +395,7 @@ export default function App() {
       setDraftQuestions(result.questions);
       setDraftSummary(result.summary ?? "");
       setDraftOpen(true);
+      setDemoQuota(result.demo ?? null);
       if (items.length === 0 && result.questions.length === 0) {
         showToast("AI 没有解析出日程，请写得更具体一些", "error");
       }
@@ -603,6 +629,7 @@ export default function App() {
           loading={aiLoading}
           error={aiError}
           hasApiKey={Boolean(deepseekKey)}
+          demo={demo}
           onOpenSettings={() => setSettingsOpen(true)}
           inputRef={plannerRef}
         />
@@ -700,6 +727,9 @@ export default function App() {
         questions={draftQuestions}
         summary={draftSummary}
         loading={aiLoading}
+        tasks={scheduledTasks}
+        settings={state.settings}
+        demo={demoQuota}
         onToggle={handleToggleDraft}
         onConfirm={handleConfirmDraft}
         onClose={() => setDraftOpen(false)}

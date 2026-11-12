@@ -73,9 +73,10 @@ bash /opt/dayflow/deploy/bootstrap.sh
 
 ## 4. 验收清单
 
-- [ ] `curl http://<IP>/api/health` → `{"ok":true,"service":"dayflow"}`
+- [ ] `curl http://<IP>/api/health` → `{"ok":true,"service":"dayflow","demo":true,"demoLimit":20}`
 - [ ] 浏览器打开 `http://<IP>/`，样式与本地一致
 - [ ] 手机上（关掉代理、用流量/家里 Wi-Fi）能打开
+- [ ] 不填 Key：顶部显示「演示模式」，输入一句话能出草案，草案里能看到「预计 明天 19:00–21:00」
 - [ ] 设置里填自己的 DeepSeek Key → 输入一句话 → 出草案 → 确认后进日历
 - [ ] 刷新页面数据还在（localStorage 按域隔离：**IP 换了数据就没了，且当前没有导入功能**，换域名前先导出 JSON）
 
@@ -105,8 +106,27 @@ systemctl status dayflow                  # 状态
 
 更新代码：本地重新打包 scp 上去 → `cd /opt/dayflow && pnpm install --frozen-lockfile && pnpm build && systemctl restart dayflow`（或重跑 `bootstrap.sh`）。
 
-## 7. 关于「共享 Key」
+## 7. 给面试官「打开就能试」：演示额度
 
-不要在生产环境里配 `DEEPSEEK_API_KEY`。一旦配上，`keyFromHeaders()` 会回退到环境变量，**任何拿到你 IP 的人都能免 Key 调用你的额度**（`server/ai.mjs:225`）。
+已经实现，配置两步：
 
-想给面试官「打开就能试」的体验，正确做法是：服务端加一个按 IP 的每日限额（例如 20 次/天）再配一个低额度 Key。这是 P1 的改动，等 IP 访问稳定了再加。
+```bash
+# 1. 写入 /opt/dayflow/.env（权限 600，不要提交进 git）
+DEMO_KEY=sk-换成你自己的低余额Key
+DEMO_DAILY_LIMIT=20
+
+# 2. 重启
+systemctl restart dayflow
+```
+
+行为：
+
+- 访客没填 Key → 用 `DEMO_KEY`，按 IP 每天 `DEMO_DAILY_LIMIT` 次
+- 页面顶部显示「演示模式 · 每天 20 次，无需 Key」；草案弹窗底部显示「演示额度剩余 N 次」
+- 用完返回 `429`，并提示去设置里填自己的 Key
+- 访客带了自己的 Key → 用他自己的，不计入演示额度
+- 只配了旧变量 `DEEPSEEK_API_KEY` 也会被当作演示 Key，同样受限额约束
+
+实现：`server/demo.mjs`（选 Key + 扣额度）、`server/ratelimit.mjs`（按天计数的内存桶）。
+
+限制：计数存在进程内存里，**重启清零**，多实例之间不共享；要抗刷得换 Redis 或按账号计费。

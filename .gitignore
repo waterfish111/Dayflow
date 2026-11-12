@@ -8,7 +8,8 @@ dist
 .dayflow-server*.log
 .vercel
 
-# ±¾µØ²¿Êð/½ØÍ¼½ÅÊÖ¼Ü
+# æœ¬åœ°éƒ¨ç½²/æˆªå›¾è„šæ‰‹æž¶
 .shots
 .deploy
 .verify
+.check

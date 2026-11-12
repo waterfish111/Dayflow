@@ -30,16 +30,15 @@ export async function parseWithAI(
   apiKey: string,
   signal?: AbortSignal,
 ): Promise<AiParseResult> {
-  if (!apiKey.trim()) {
-    throw new Error("请先在设置中填入你自己的 DeepSeek API Key。");
-  }
-
+  // 没有自己的 Key 也允许发请求：服务端可能开着演示额度。
+  // 两者都没有时，由服务端返回一句明确的错误。
+  const key = apiKey.trim();
   const today = new Date();
   const response = await fetch("/api/ai/parse", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-deepseek-key": apiKey.trim(),
+      ...(key ? { "x-deepseek-key": key } : {}),
     },
     body: JSON.stringify({
       text,
@@ -72,5 +71,6 @@ export async function parseWithAI(
     items: result.items.map(sanitizeItem),
     questions: Array.isArray(result.questions) ? result.questions : [],
     summary: result.summary || "",
+    demo: result.demo,
   };
 }

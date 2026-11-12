@@ -12,6 +12,7 @@ export function AIPlanner({
   loading,
   error,
   hasApiKey,
+  demo,
   onOpenSettings,
   inputRef,
 }: {
@@ -19,6 +20,7 @@ export function AIPlanner({
   loading: boolean;
   error: string;
   hasApiKey: boolean;
+  demo: { available: boolean; limit: number };
   onOpenSettings: () => void;
   inputRef: RefObject<HTMLTextAreaElement | null>;
 }) {
@@ -100,13 +102,18 @@ export function AIPlanner({
             </button>
           ))}
         </div>
-        {!hasApiKey ? (
+        {hasApiKey ? (
+          <span className="shortcut-hint">⌘ / Ctrl + Enter</span>
+        ) : demo.available ? (
+          <span className="demo-hint">
+            <Icon name="key" size={15} />
+            演示模式 · 每天 {demo.limit} 次，无需 Key
+          </span>
+        ) : (
           <button className="text-button" onClick={onOpenSettings}>
             <Icon name="key" size={15} />
             先填入 DeepSeek Key
           </button>
-        ) : (
-          <span className="shortcut-hint">⌘ / Ctrl + Enter</span>
         )}
       </div>
 

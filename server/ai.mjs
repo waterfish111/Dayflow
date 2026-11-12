@@ -133,7 +133,7 @@ export async function parseSchedule(payload, key) {
   if (!cleanKey) {
     throw new AiError(
       400,
-      "还没有配置 DeepSeek API Key。请打开设置，填入你自己的 Key。",
+      "这个站点没有开启演示额度。请打开设置，填入你自己的 DeepSeek Key。",
     );
   }
 
@@ -222,12 +222,20 @@ export async function parseSchedule(payload, key) {
   }
 }
 
-export function keyFromHeaders(headers, env = process.env) {
+/**
+ * 决定这次请求用谁的 Key。
+ * isDemo 为 true 表示用的是服务端共享 Key，需要按 IP 限流。
+ */
+export function resolveKey(headers, env = process.env) {
   const headerKey =
     headers?.["x-deepseek-key"] ??
     headers?.get?.("x-deepseek-key") ??
     "";
-  return String(headerKey).trim() || String(env.DEEPSEEK_API_KEY ?? "").trim();
+  const userKey = String(headerKey).trim();
+  if (userKey) return { key: userKey, isDemo: false };
+
+  const sharedKey = String(env.DEMO_KEY ?? env.DEEPSEEK_API_KEY ?? "").trim();
+  return { key: sharedKey, isDemo: Boolean(sharedKey) };
 }
 
 export function bodyFromRequest(body) {
