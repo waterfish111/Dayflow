@@ -35,7 +35,7 @@ Dayflow 把这条路径压缩成一句话，同时不让 AI 直接决定时间�
 - **日历**：日 / 周 / 月三视图，15 / 30 / 60 分钟粒度，桌面端拖拽改期、拖回待办池
 - **自定义节奏**：工作日 / 周末作息模板、每日安排上限、缓冲时间、免打扰时段、分类
 - **PWA**：可安装、离线外壳缓存、应用内提醒与系统通知
-- **数据自持**：状态存在浏览器 `localStorage`，DeepSeek Key 由使用者自带（或由站点提供限额演示额度），支持 JSON 导出
+- **数据自持**：状态存在浏览器 `localStorage`，DeepSeek Key 由使用者自带（或由站点提供限额演示额度），支持 JSON 导出与导入（换设备 / 换域名不丢数据）
 
 ## 排期引擎
 
@@ -67,6 +67,7 @@ autoSchedule(tasks, settings, { today: "2026-11-09" })
 | AI | DeepSeek Chat Completions，JSON 结构化输出 |
 | 数据 | 浏览器 `localStorage`，local-first |
 | 测试 | Vitest（37 个单元测试，覆盖排期与日期工具） |
+| 基准与评测 | `pnpm bench` 排期耗时基准，`pnpm eval:ai` 解析准确率评测（24 条中文用例） |
 | CI | GitHub Actions：typecheck → test → build |
 | PWA | Manifest、Service Worker、通知权限 |
 
@@ -127,7 +128,8 @@ pnpm preview    # 以生产模式启动本地服务
 
 ```bash
 DEMO_KEY=sk-你的低余额Key
-DEMO_DAILY_LIMIT=20   # 每个 IP 每天的次数，默认 20
+DEMO_DAILY_LIMIT=20    # 每个 IP 每天的次数，默认 20
+DEMO_GLOBAL_LIMIT=200  # 全站每天总次数，防止换 IP 刷；0 = 不限
 ```
 
 配置后：没填 Key 的访客会自动使用 `DEMO_KEY`，按 IP 每天计数；页面顶部会显示「演示模式 · 每天 20 次」，草案弹窗底部会显示本次剩余次数。用完了返回 `429`，并提示去设置里填自己的 Key。填了自己 Key 的请求不计数。
@@ -135,6 +137,12 @@ DEMO_DAILY_LIMIT=20   # 每个 IP 每天的次数，默认 20
 实现见 `server/demo.mjs`（Key 选择 + 额度扣减）与 `server/ratelimit.mjs`（内存计数器）。计数存在进程内存里：重启清零、多实例不共享——单机 demo 够用，要抗刷得换 Redis。
 
 兼容旧变量名：只配 `DEEPSEEK_API_KEY` 时也会当作演示 Key，并同样受每日限额约束（不会再出现「配了环境变量就等于无限额度」的情况）。
+
+**关于 Key 安全**（重要）：
+
+- `DEMO_KEY` 只在服务端 `.env` 里，**永远不会发给浏览器**；前端拿到的只有剩余次数
+- 服务端不打印请求头、不把 Key 写进日志、不回显上游错误体；`.env` 已加入 `.gitignore`，权限建议 `600`
+- 但**当前是 HTTP**：访客在设置里填自己的 Key 时，这个 Key 会以明文经过网络（`x-deepseek-key` 头）。所以现在的建议是「只用自己的演示额度，别在公网 HTTP 页面上填自己的 Key」；等配好域名和证书再开放自带 Key
 
 ## 测试
 
@@ -148,9 +156,36 @@ pnpm test
 
 CI 在每次 push 和 PR 上执行 `typecheck → test → build`。
 
+## 基准与评测
+
+两个「可验证」脚本，用来回答「你怎么知道它够快、够准」。
+
+**排期耗时**（`pnpm bench`，5 轮取分位，horizon 14 天，默认设置）：
+
+| 任务数 | p50 | p95 | 已排入 |
+|---|---|---|---|
+| 20 | 0.4 ms | 6.4 ms | 20 |
+| 200 | 4.7 ms | 5.6 ms | 69 |
+| 1000 | 20.3 ms | 21.3 ms | 90 |
+| 5000 | 89.1 ms | 95.5 ms | 96 |
+
+规模上去后排入变少是容量问题（14 天内只有那么多空档），不是算法卡死；耗时基本线性，5000 条仍在 100 ms 内。
+
+**AI 解析准确率**（`pnpm eval:ai`，24 条中文用例，按字段拆分）：
+
+```bash
+pnpm eval:ai --dry-run   # 只校验题库，不花钱
+pnpm eval:ai --mock      # 用标准答案反测打分逻辑（应得 100%）
+DEEPSEEK_API_KEY=sk-xxx pnpm eval:ai   # 真跑
+```
+
+每条用例断言 `条数 / kind / date / start / end / minutes / deadline / priority / pool / recurrence / weekdays`，输出每个字段的命中率与失败明细。改提示词后可以直接对比退化在哪一类。
+
+> 未在 README 里写具体准确率数字：需要真实 Key 跑出来才算证据，不编。跑完把结果贴到 `docs/INTERVIEW.md`。
+
 ## 已知限制
 
-- **数据在单个浏览器**：换设备、换域名或清缓存不会自动迁移；目前只有导出，没有导入
+- **数据在单个浏览器**：换设备、换域名或清缓存不会自动迁移，需要用「导出 JSON / 导入 JSON」手动搬；导入会覆盖当前任务
 - **通知不是真后台**：只在页面打开时每 30 秒检查一次，关闭页面后不会提醒；需要 Web Push 或 Capacitor 壳
 - **`vercel.app` 在部分网络不可直连**：这是网络环境问题，不是代码错误；换自定义域名 + Cloudflare 或迁移机房可解
 - **Key 明文存储**：`localStorage` 未加密，个人自用可接受，公开分享前需要改造
@@ -179,14 +214,15 @@ CI 在每次 push 和 PR 上执行 `typecheck → test → build`。
 | 2026-11-08 | 补充 MIT 协议、Vitest 单元测试与 GitHub Actions |
 | 2026-11-09 | 补三张真实界面截图、仓库 About 与 `v0.2.0` Release |
 | 2026-11-12 | 部署到阿里云（IP 直连），加演示额度与草案预计时间 |
+| 2026-11-12 | 补 JSON 导入（含 schema 校验）、排期基准与 AI 解析评测脚本 |
 
 ## 下一步
 
-1. 数据导入与 schema 版本迁移，让导出真正可用
-2. 拆分 `src/App.tsx` 为 hooks + reducer，降低耦合
-3. Web Push 或 Capacitor APK，补真正的后台提醒
-4. AI 层补固定中文评测集，量化解析准确率
-5. Playwright 端到端测试 + 排期性能基准
+1. 拆分 `src/App.tsx` 为 hooks + reducer，降低耦合
+2. Web Push 或 Capacitor APK，补真正的后台提醒
+3. 域名 + HTTPS：恢复 Service Worker，并让「填自己 Key」在链路上安全
+4. Playwright 端到端测试，覆盖「输入 → 草案 → 确认 → 刷新仍在」
+5. 用真实 Key 跑一遍 `pnpm eval:ai`，把字段准确率写进 `docs/INTERVIEW.md`
 
 ## License
 

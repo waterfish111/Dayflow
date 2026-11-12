@@ -114,6 +114,7 @@ systemctl status dayflow                  # 状态
 # 1. 写入 /opt/dayflow/.env（权限 600，不要提交进 git）
 DEMO_KEY=sk-换成你自己的低余额Key
 DEMO_DAILY_LIMIT=20
+DEMO_GLOBAL_LIMIT=200
 
 # 2. 重启
 systemctl restart dayflow
@@ -122,6 +123,7 @@ systemctl restart dayflow
 行为：
 
 - 访客没填 Key → 用 `DEMO_KEY`，按 IP 每天 `DEMO_DAILY_LIMIT` 次
+- 全站每天总次数还有一道闸：`DEMO_GLOBAL_LIMIT`（默认 200，0 = 关闭），防止换 IP 刷
 - 页面顶部显示「演示模式 · 每天 20 次，无需 Key」；草案弹窗底部显示「演示额度剩余 N 次」
 - 用完返回 `429`，并提示去设置里填自己的 Key
 - 访客带了自己的 Key → 用他自己的，不计入演示额度
@@ -130,3 +132,24 @@ systemctl restart dayflow
 实现：`server/demo.mjs`（选 Key + 扣额度）、`server/ratelimit.mjs`（按天计数的内存桶）。
 
 限制：计数存在进程内存里，**重启清零**，多实例之间不共享；要抗刷得换 Redis 或按账号计费。
+
+## 8. Key 会不会泄露
+
+按「谁能看到」拆开看：
+
+| 位置 | 内容 | 谁能看到 |
+|---|---|---|
+| 服务端 `/opt/dayflow/.env` | `DEMO_KEY` 真实 Key | 只有 root（文件权限 600，systemd 以 root 读入后再降权运行） |
+| 浏览器 | 只收到 `{remaining, limit}` | 所有人 |
+| 服务端日志 | 只打印启动地址与错误摘要 | 有 root 的人 |
+| 仓库 | `.env.example` 只有空值 | 所有人 |
+
+所以**演示 Key 不会因为「别人打开网页」而泄露**。会泄露的路径只有三种：服务器被拿到 root、`.env` 被打进备份/仓库、你自己贴到聊天或截图里。
+
+但有一个真实风险，和演示 Key 无关：**当前站点是 HTTP**。访客如果在设置里填自己的 Key，这个 Key 会以明文走 `x-deepseek-key` 请求头经过网络（同 Wi-Fi 的人、中间设备都能看到），并明文存在他本机 `localStorage`。所以在配好 HTTPS 之前：
+
+- 对外只说「不用填 Key，直接用演示额度」
+- 不要把「填自己的 Key」当成推荐路径
+- 买了域名后第一件事是上证书（Caddy 或 Nginx + certbot），HTTP 直接 301 到 HTTPS
+
+另外建议：`DEMO_KEY` 单独申请一把，只充 5–10 元，随时可以在 DeepSeek 控制台吊销；`DEMO_GLOBAL_LIMIT` 就是最后一道保险。
