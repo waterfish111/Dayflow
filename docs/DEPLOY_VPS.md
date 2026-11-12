@@ -2,6 +2,17 @@
 
 目标：先让项目在国内**用 IP 直接打开**，不依赖域名、不依赖 Vercel。等演示稳定后再买域名上 HTTPS。
 
+## 已部署状态
+
+| 项 | 值 |
+| --- | --- |
+| 地址 | <http://39.106.48.233> |
+| 机器 | 阿里云 · Ubuntu 24.04.2 LTS · x86_64 · 2 核 / 1.6 GB / 40 GB ESSD |
+| 运行方式 | systemd 单元 `dayflow.service`，非 root 用户 `dayflow` 用 `CAP_NET_BIND_SERVICE` 监听 80 |
+| 资源占用 | 常驻内存 **19 MB**；`/opt/dayflow` 88 MB + pnpm store 104 MB；`dist` 360 KB |
+| 实测 | 首页 200、`/assets/*.js` 200、SPA 深链接回落 200、无 Key 调 `/api/ai/parse` 返回 400 与中文提示 |
+| 开机自启 | `enabled`；由 1 GB swap 兜底（`/swapfile`，已写入 fstab） |
+
 ## 0. 先明确三件事
 
 | 项 | IP + HTTP 下的现状 | 影响 |
@@ -20,7 +31,7 @@
 | 同上的大陆节点（学生机更便宜） | 9.9–24 元/月 | 域名要备案，IP 直连不用 | 追求低延迟、愿意等备案 |
 | 海外 VPS（Vultr / Hetzner 等） | $4–6/月 | 不需要 | 大陆访问延迟高一些 |
 
-配置要求很低：**1 核 1G 够跑**，构建时峰值内存约 500MB，建议 1G 以上并加 1G swap。镜像选 **Ubuntu 24.04 LTS**（22.04 也可以）。带宽 1–3M 足够。
+配置要求很低：**1 核 1G 够跑**（本次实测：运行内存 19 MB，`vite build` 在 1.6 GB 机器上通过，另加了 1 GB swap 兜底）。镜像选 **Ubuntu 24.04 LTS**（22.04 也可以）。带宽 1–3M 足够——首屏 JS 285 KB、gzip 后 88 KB。
 
 > 大陆节点注意：部分厂商对 80 端口需要域名备案后才放行，**用非 80 端口（如 8080）可以绕开**，访问时带端口号即可。
 
@@ -33,6 +44,10 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAi/XIUmKmVr24qQHEZ9aGH+Fae7Js4HDQ/Wg3c1uGsz
 ```
 
 （如果创建时没找到密钥选项，就先用密码登录，登录后执行 `mkdir -p ~/.ssh && echo '<上面那行>' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`。）
+
+> **本次实际踩到的两个坑**
+> 1. 阿里云镜像默认登录用户是 `admin` 而不是 `root`，直接 `mkdir /root/.ssh` 会 `Permission denied`；要用 `sudo mkdir -p /root/.ssh && ... | sudo tee -a /root/.ssh/authorized_keys`。
+> 2. 实例可能关掉了密码登录（`Authentications that can continue: publickey`），这时唯一入口是控制台的 **Workbench / VNC 远程连接**，先用它把公钥追加进去。
 
 然后把 **公网 IP、SSH 端口（默认 22）、用户名（root 或 ubuntu）** 告诉我，剩下的我来做。
 
