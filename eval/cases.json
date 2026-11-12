@@ -1,0 +1,134 @@
+[
+  {
+    "id": "c01",
+    "text": "明天下午三点开产品评审会，一个小时",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-13", "start": "15:00", "end": "16:00" }] }
+  },
+  {
+    "id": "c02",
+    "text": "周五晚上八点看电影",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-13", "start": "20:00" }] }
+  },
+  {
+    "id": "c03",
+    "text": "写周报，大概两小时，周五前完成",
+    "expect": { "count": 1, "items": [{ "kind": "task", "minutes": 120, "deadline": "2026-11-13" }] }
+  },
+  {
+    "id": "c04",
+    "text": "每天 19:00 学英语半小时",
+    "expect": { "count": 1, "items": [{ "kind": "task", "start": "19:00", "minutes": 30, "recurrence": "daily" }] }
+  },
+  {
+    "id": "c05",
+    "text": "每周一三五早上跑步 40 分钟",
+    "expect": { "count": 1, "items": [{ "kind": "task", "minutes": 40, "recurrence": "weekly", "weekdays": [1, 3, 5] }] }
+  },
+  {
+    "id": "c06",
+    "text": "下周一上午十点面试",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-16", "start": "10:00" }] }
+  },
+  {
+    "id": "c07",
+    "text": "整理面试题库，放进待办池",
+    "expect": { "count": 1, "items": [{ "kind": "task", "pool": true }] }
+  },
+  {
+    "id": "c08",
+    "text": "这周六下午两点到四点搬家",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-14", "start": "14:00", "end": "16:00" }] }
+  },
+  {
+    "id": "c09",
+    "text": "明天上午复习高数两小时，晚上跑步 30 分钟",
+    "expect": {
+      "count": 2,
+      "items": [
+        { "kind": "task", "date": "2026-11-13", "minutes": 120 },
+        { "kind": "task", "date": "2026-11-13", "minutes": 30 }
+      ]
+    }
+  },
+  {
+    "id": "c10",
+    "text": "周日之前把论文初稿写完，估计要六小时",
+    "expect": { "count": 1, "items": [{ "kind": "task", "minutes": 360, "deadline": "2026-11-15" }] }
+  },
+  {
+    "id": "c11",
+    "text": "每天早上七点半冥想十分钟",
+    "expect": { "count": 1, "items": [{ "kind": "task", "start": "07:30", "minutes": 10, "recurrence": "daily" }] }
+  },
+  {
+    "id": "c12",
+    "text": "下午三点和导师开会，半小时",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-12", "start": "15:00", "end": "15:30" }] }
+  },
+  {
+    "id": "c13",
+    "text": "明天中午十二点和客户吃饭",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-13", "start": "12:00" }] }
+  },
+  {
+    "id": "c14",
+    "text": "这周五之前提交报销单",
+    "expect": { "count": 1, "items": [{ "kind": "task", "deadline": "2026-11-13" }] }
+  },
+  {
+    "id": "c15",
+    "text": "每天晚上十点复盘十五分钟",
+    "expect": { "count": 1, "items": [{ "kind": "task", "start": "22:00", "minutes": 15, "recurrence": "daily" }] }
+  },
+  {
+    "id": "c16",
+    "text": "下周三上午九点到十一点参加培训",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-18", "start": "09:00", "end": "11:00" }] }
+  },
+  {
+    "id": "c17",
+    "text": "买一双跑鞋，不急",
+    "expect": { "count": 1, "items": [{ "kind": "task", "priority": "low", "pool": true }] }
+  },
+  {
+    "id": "c18",
+    "text": "明天上午先写代码两小时，然后下午三点开周会",
+    "expect": {
+      "count": 2,
+      "items": [
+        { "kind": "task", "date": "2026-11-13", "minutes": 120 },
+        { "kind": "event", "date": "2026-11-13", "start": "15:00" }
+      ]
+    }
+  },
+  {
+    "id": "c19",
+    "text": "每周五晚上八点打羽毛球一个半小时",
+    "expect": { "count": 1, "items": [{ "kind": "task", "start": "20:00", "minutes": 90, "recurrence": "weekly", "weekdays": [5] }] }
+  },
+  {
+    "id": "c20",
+    "text": "后天上午去医院复查，记得带报告",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-14" }] }
+  },
+  {
+    "id": "c21",
+    "text": "把季度总结写完，截止下周一，优先级高",
+    "expect": { "count": 1, "items": [{ "kind": "task", "deadline": "2026-11-16", "priority": "high" }] }
+  },
+  {
+    "id": "c22",
+    "text": "明天上午十点到十一点半面试候选人",
+    "expect": { "count": 1, "items": [{ "kind": "event", "date": "2026-11-13", "start": "10:00", "end": "11:30" }] }
+  },
+  {
+    "id": "c23",
+    "text": "每周日晚上规划下周，30 分钟",
+    "expect": { "count": 1, "items": [{ "kind": "task", "minutes": 30, "recurrence": "weekly", "weekdays": [0] }] }
+  },
+  {
+    "id": "c24",
+    "text": "有空的时候整理一下书桌",
+    "expect": { "count": 1, "items": [{ "kind": "task" }], "questions": "至少一条" }
+  }
+]
