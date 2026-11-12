@@ -181,7 +181,9 @@ DEEPSEEK_API_KEY=sk-xxx pnpm eval:ai   # 真跑
 
 每条用例断言 `条数 / kind / date / start / end / minutes / deadline / priority / pool / recurrence / weekdays`，输出每个字段的命中率与失败明细。改提示词后可以直接对比退化在哪一类。
 
-> 未在 README 里写具体准确率数字：需要真实 Key 跑出来才算证据，不编。跑完把结果贴到 `docs/INTERVIEW.md`。
+实测（2026-11-12，24 条中文用例，`deepseek-chat`）：第一次 **108/110 = 98.2%**，两处失败是「weekly 漏了 weekdays」和「重复性运动被判成 event」；把星期约定与 kind 边界写进提示词后复测 **110/110**。
+
+> 注意：这 24 条是开发集，调完提示词再测同一批偏乐观。完整记录与保留意见见 [`docs/AI_EVAL.md`](docs/AI_EVAL.md)，下一步是留出 20 条 holdout 只跑一次。
 
 ## 已知限制
 
@@ -200,6 +202,7 @@ DEEPSEEK_API_KEY=sk-xxx pnpm eval:ai   # 真跑
 - [代码阅读笔记](docs/LEARNING.md)
 - [Vercel 部署操作步骤](docs/DEPLOY_VERCEL.md)
 - [云服务器部署（IP 直连，免备案）](docs/DEPLOY_VPS.md)
+- [AI 解析评测记录：两轮跑分与提示词改动](docs/AI_EVAL.md)
 - [面试材料包：简历写法、90 秒讲述稿与预判问答](docs/INTERVIEW.md)
 
 ## 项目历程
@@ -215,6 +218,7 @@ DEEPSEEK_API_KEY=sk-xxx pnpm eval:ai   # 真跑
 | 2026-11-09 | 补三张真实界面截图、仓库 About 与 `v0.2.0` Release |
 | 2026-11-12 | 部署到阿里云（IP 直连），加演示额度与草案预计时间 |
 | 2026-11-12 | 补 JSON 导入（含 schema 校验）、排期基准与 AI 解析评测脚本 |
+| 2026-11-12 | 用真实 Key 跑评测：98.2% → 按错误类型改提示词 → 110/110 |
 
 ## 下一步
 
@@ -222,7 +226,7 @@ DEEPSEEK_API_KEY=sk-xxx pnpm eval:ai   # 真跑
 2. Web Push 或 Capacitor APK，补真正的后台提醒
 3. 域名 + HTTPS：恢复 Service Worker，并让「填自己 Key」在链路上安全
 4. Playwright 端到端测试，覆盖「输入 → 草案 → 确认 → 刷新仍在」
-5. 用真实 Key 跑一遍 `pnpm eval:ai`，把字段准确率写进 `docs/INTERVIEW.md`
+5. 补 20 条 holdout 用例，只跑一次，检验提示词改动的泛化
 
 ## License
 
