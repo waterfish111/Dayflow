@@ -64,6 +64,7 @@ export function SettingsPanel({
   onEnableNotifications,
   onTestNotification,
   nativeApp,
+  reminderCount,
   onExport,
   onImport,
 }: {
@@ -77,6 +78,7 @@ export function SettingsPanel({
   onEnableNotifications: () => void;
   onTestNotification: () => void;
   nativeApp: boolean;
+  reminderCount: number | null;
   onExport: () => void;
   onImport: (file: File) => void;
 }) {
@@ -293,35 +295,34 @@ export function SettingsPanel({
               <h3>提醒</h3>
               <p>
                 {nativeApp
-                  ? "App 里用系统通知：任务开始前 10 分钟提醒，锁屏也会响。"
+                  ? "任务开始前 10 分钟用系统通知提醒，锁屏也会响。"
                   : "每天汇总今天的任务；固定日程和截止任务提前两小时提醒。"}
               </p>
             </div>
-            <button
-              type="button"
-              className="button button--ghost button--small"
-              onClick={onEnableNotifications}
-            >
-              <Icon name="bell" size={15} />
-              {notificationState === "granted"
-                ? "通知已开启"
-                : notificationState === "unsupported"
-                  ? "浏览器不支持"
-                  : "开启系统通知"}
-            </button>
-          </div>
-          {nativeApp ? (
-            <div className="settings-inline">
+            <div className="settings-actions">
               <button
                 type="button"
                 className="button button--ghost button--small"
-                onClick={onTestNotification}
+                onClick={onEnableNotifications}
               >
                 <Icon name="bell" size={15} />
-                发送测试通知（10 秒后）
+                {notificationState === "granted"
+                  ? "通知已开启"
+                  : notificationState === "unsupported"
+                    ? "浏览器不支持"
+                    : "开启系统通知"}
               </button>
+              {nativeApp ? (
+                <button
+                  type="button"
+                  className="settings-link"
+                  onClick={onTestNotification}
+                >
+                  发送测试通知
+                </button>
+              ) : null}
             </div>
-          ) : null}
+          </div>
           <div className="settings-inline">
             <label className="field">
               <span>每日汇总</span>
@@ -356,7 +357,11 @@ export function SettingsPanel({
           </div>
           <p className="settings-muted">
             {nativeApp
-              ? "到点没响时按顺序检查：系统设置里允许 Dayflow 发通知、关闭电池优化、允许「闹钟和提醒」。"
+              ? `${
+                  reminderCount === null
+                    ? ""
+                    : `已排入 ${reminderCount} 条系统提醒。`
+                }到点没响时检查：通知权限、电池优化、「闹钟和提醒」。`
               : "网页通知需要 HTTPS；手机通过局域网 HTTP 打开时，系统通知可能不可用。"}
           </p>
         </section>

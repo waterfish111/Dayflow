@@ -105,10 +105,7 @@ export function AIPlanner({
         {hasApiKey ? (
           <span className="shortcut-hint">⌘ / Ctrl + Enter</span>
         ) : demo.available ? (
-          <span className="demo-hint">
-            <Icon name="key" size={15} />
-            演示模式 · 每天 {demo.limit} 次，无需 Key
-          </span>
+          <span className="demo-hint">演示模式 · 每天 {demo.limit} 次，无需 Key</span>
         ) : (
           <button className="text-button" onClick={onOpenSettings}>
             <Icon name="key" size={15} />

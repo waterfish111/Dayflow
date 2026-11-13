@@ -27,6 +27,7 @@ import {
   ensureNativePermission,
   initNativeNotifications,
   isNativeApp,
+  pendingReminderCount,
   sendTestNotification,
   syncNativeReminders,
 } from "./lib/nativeNotifications";
@@ -84,6 +85,7 @@ export default function App() {
     remaining: number;
     limit: number;
   } | null>(null);
+  const [reminderCount, setReminderCount] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const plannerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -137,19 +139,22 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
 
-  // 装进 App 以后改用系统本地通知：任务或作息一变就重排，
-  // 回到前台时再同步一次（系统可能清理过闹钟，或用户刚改了权限）。
+  // 装进 App 以后改用系统本地通知：任务或作息一变就增量同步，
+  // 只在前台做 —— 后台时 WebView 会被挂起，半途中断会留下空队列。
   useEffect(() => {
     if (!isNativeApp()) return;
     void initNativeNotifications();
 
     let timer = 0;
     const sync = () => {
+      if (document.visibilityState !== "visible") return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        void syncNativeReminders(stateRef.current.tasks).catch(() => {
-          // 权限没给或系统拒绝时静默失败，网页那套提醒仍在跑。
-        });
+        void syncNativeReminders(stateRef.current.tasks)
+          .then((count) => setReminderCount(count))
+          .catch(() => {
+            // 权限没给或系统拒绝时静默失败，网页那套提醒仍在跑。
+          });
       }, 400);
     };
 
@@ -626,6 +631,7 @@ export default function App() {
       }
       setNotificationState("granted");
       const count = await syncNativeReminders(stateRef.current.tasks).catch(() => 0);
+      setReminderCount(count);
       showToast(
         count > 0
           ? `系统提醒已开启，已排入 ${count} 条`
@@ -653,6 +659,7 @@ export default function App() {
     const ok = await sendTestNotification().catch(() => false);
     if (ok) {
       showToast("10 秒后收到一条测试通知，建议现在锁屏");
+      void pendingReminderCount().then(setReminderCount);
     } else {
       showToast("发不出去：先允许通知权限，再关掉电池优化", "error");
     }
@@ -812,6 +819,7 @@ export default function App() {
         onEnableNotifications={enableNotifications}
         onTestNotification={testNotification}
         nativeApp={isNativeApp()}
+        reminderCount={reminderCount}
         onExport={handleExport}
         onImport={handleImport}
       />

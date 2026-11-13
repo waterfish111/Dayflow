@@ -91,37 +91,76 @@ function toNotification(task: ScheduleItem, id: number): LocalNotificationSchema
   };
 }
 
+function desiredNotifications(tasks: ScheduleItem[]): Map<number, LocalNotificationSchema> {
+  const desired = new Map<number, LocalNotificationSchema>();
+  for (const task of tasks) {
+    if (task.completed) continue;
+    if (desired.size >= MAX_NOTIFICATIONS) break;
+    let id = hashId(task.id);
+    while (desired.has(id)) id = (id + 1) % 2_147_483_647;
+    const notification = toNotification(task, id);
+    if (!notification) continue;
+    desired.set(id, notification);
+  }
+  return desired;
+}
+
+function triggerTime(notification: LocalNotificationSchema): number {
+  const at = notification.schedule?.at;
+  if (!at) return 0;
+  const value = at instanceof Date ? at.getTime() : new Date(at).getTime();
+  return Number.isNaN(value) ? 0 : value;
+}
+
 /**
- * 用当前任务表重建系统提醒：先清空旧的，再按最新的排期重排。
- * 返回实际排入的条数。
+ * 只做增量同步：删掉已经不需要的，补上还没有的，剩下的原样不动。
+ * 千万不要「全部取消再重排」——App 一进后台 WebView 会被挂起，
+ * 取消跑完了、重排没跑完，锁屏之后就没有任何提醒了。
  */
 export async function syncNativeReminders(tasks: ScheduleItem[]): Promise<number> {
   if (!isNativeApp()) return 0;
   await initNativeNotifications();
 
+  const desired = desiredNotifications(tasks);
   const pending = await LocalNotifications.getPending();
-  if (pending.notifications.length > 0) {
-    await LocalNotifications.cancel({
-      notifications: pending.notifications.map((item) => ({ id: item.id })),
-    });
+  const pendingById = new Map(pending.notifications.map((item) => [item.id, item]));
+
+  const drop: { id: number }[] = [];
+  for (const item of pending.notifications) {
+    const next = desired.get(item.id);
+    if (!next) {
+      drop.push({ id: item.id });
+      continue;
+    }
+    // 同一条任务改了时间，提醒也要跟着换。
+    if (triggerTime(item) !== triggerTime(next)) {
+      drop.push({ id: item.id });
+    }
+  }
+  if (drop.length > 0) {
+    await LocalNotifications.cancel({ notifications: drop });
   }
 
-  const used = new Set<number>();
-  const notifications: LocalNotificationSchema[] = [];
-  for (const task of tasks) {
-    if (task.completed) continue;
-    if (notifications.length >= MAX_NOTIFICATIONS) break;
-    let id = hashId(task.id);
-    while (used.has(id)) id = (id + 1) % 2_147_483_647;
-    const notification = toNotification(task, id);
-    if (!notification) continue;
-    used.add(id);
-    notifications.push(notification);
+  const droppedIds = new Set(drop.map((item) => item.id));
+  const add = [...desired.values()].filter(
+    (item) => !pendingById.has(item.id) || droppedIds.has(item.id),
+  );
+  if (add.length > 0) {
+    await LocalNotifications.schedule({ notifications: add });
   }
 
-  if (notifications.length === 0) return 0;
-  await LocalNotifications.schedule({ notifications });
-  return notifications.length;
+  return desired.size;
+}
+
+/** 当前系统里排了多少条，用来在设置里显示状态。 */
+export async function pendingReminderCount(): Promise<number> {
+  if (!isNativeApp()) return 0;
+  try {
+    const pending = await LocalNotifications.getPending();
+    return pending.notifications.length;
+  } catch {
+    return 0;
+  }
 }
 
 /** 10 秒后发一条，用来验证权限、渠道和系统设置。 */

@@ -440,15 +440,8 @@ a {
 }
 
 .demo-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   flex: 0 0 auto;
-  padding: 4px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(239, 246, 238, 0.72);
+  color: rgba(239, 246, 238, 0.45);
   font-size: 11px;
 }
 
@@ -1646,6 +1639,31 @@ a {
   line-height: 1.5;
 }
 
+.settings-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.settings-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 9px;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.settings-link:hover {
+  color: var(--accent);
+}
+
 .settings-data-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2126,7 +2144,6 @@ a {
 
   .demo-hint {
     margin-top: 8px;
-    font-size: 10px;
   }
 
   .planner-footer .text-button {
