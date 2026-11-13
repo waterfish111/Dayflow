@@ -29,6 +29,7 @@ import {
   initNativeNotifications,
   isNativeApp,
   pendingReminderCount,
+  scheduleStartupProbe,
   sendTestNotification,
   syncNativeReminders,
 } from "./lib/nativeNotifications";
@@ -88,6 +89,7 @@ export default function App() {
   } | null>(null);
   const [reminderCount, setReminderCount] = useState<number | null>(null);
   const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
+  const [nativeStatus, setNativeStatus] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const plannerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -167,6 +169,32 @@ export default function App() {
       document.removeEventListener("visibilitychange", sync);
     };
   }, [state.tasks, state.settings]);
+
+  // 每次冷启动都排一条 60 秒后的自检通知，并把状态显示在首页，
+  // 这样不用翻设置也能判断「到底排没排进去」「权限给没给」。
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    let cancelled = false;
+    void (async () => {
+      const granted = await ensureNativePermission().catch(() => false);
+      const probed = await scheduleStartupProbe().catch(() => false);
+      const lines = await diagnoseReminders().catch(() => []);
+      if (cancelled) return;
+      setNativeStatus(
+        [
+          granted ? "权限已给" : "权限被拒",
+          probed ? "已排入 60 秒自检" : "自检排入失败",
+          ...lines.filter((line) => line.startsWith("已排入")),
+        ].join(" · "),
+      );
+      if (!probed) {
+        showToast("自检提醒没排进去，点设置里的「诊断」看原因", "error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
 
   const scheduledTasks = useMemo(
     () => state.tasks.filter(isTaskScheduled),
@@ -732,6 +760,12 @@ export default function App() {
       />
 
       <main className="app-main">
+        {nativeStatus ? (
+          <div className="native-status" role="status">
+            {nativeStatus}
+          </div>
+        ) : null}
+
         <AIPlanner
           onParse={(text) => void handleAIRequest(text)}
           loading={aiLoading}

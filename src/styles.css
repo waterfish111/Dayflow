@@ -1688,6 +1688,17 @@ a {
   margin: 0;
 }
 
+.native-status {
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: rgba(47, 107, 79, 0.08);
+  color: var(--accent-deep);
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .settings-data-actions {
   display: flex;
   flex-wrap: wrap;

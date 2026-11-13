@@ -96,7 +96,6 @@ function toNotification(task: ScheduleItem, id: number): LocalNotificationSchema
     id,
     title: task.title,
     body: `${REMINDER_LEAD_MINUTES} 分钟后开始 · ${task.category}`,
-    channelId: CHANNEL_ID,
     schedule: { at: trigger, allowWhileIdle: true },
     extra: { taskId: task.id, date: task.date },
   };
@@ -195,7 +194,6 @@ export async function sendTestNotification(delayMs = 10_000): Promise<boolean> {
           id: 999_999,
           title: "Dayflow 测试提醒",
           body: "看到这条，说明锁屏提醒已经打通了。",
-          channelId: CHANNEL_ID,
           schedule: { at: new Date(Date.now() + Math.max(delayMs, 500)), allowWhileIdle: true },
         },
       ],
@@ -252,4 +250,30 @@ export async function diagnoseReminders(): Promise<string[]> {
 
   lines.push(`最近错误：${lastError || "无"}`);
   return lines;
+}
+
+/**
+ * 启动自检：排一条 60 秒后的通知。装好 App 打开一次、锁屏，等一分钟，
+ * 收到就说明系统提醒链路是通的，收不到就是权限/系统后台限制。
+ */
+export async function scheduleStartupProbe(): Promise<boolean> {
+  if (!isNativeApp()) return false;
+  await initNativeNotifications();
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: 999_998,
+          title: "自检提醒 · 60 秒后",
+          body: `锁屏也能收到这条，说明提醒链路通了（构建 ${__APP_BUILD__}）`,
+          schedule: { at: new Date(Date.now() + 60_000), allowWhileIdle: true },
+        },
+      ],
+    });
+    lastError = "";
+    return true;
+  } catch (error) {
+    lastError = describeError(error);
+    return false;
+  }
 }
