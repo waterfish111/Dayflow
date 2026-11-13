@@ -24,6 +24,13 @@ import {
 import { parseWithAI } from "./lib/ai";
 import { apiUrl } from "./lib/api";
 import {
+  ensureNativePermission,
+  initNativeNotifications,
+  isNativeApp,
+  sendTestNotification,
+  syncNativeReminders,
+} from "./lib/nativeNotifications";
+import {
   checkReminders,
   notificationPermission,
   registerServiceWorker,
@@ -129,6 +136,30 @@ export default function App() {
     }, 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // 装进 App 以后改用系统本地通知：任务或作息一变就重排，
+  // 回到前台时再同步一次（系统可能清理过闹钟，或用户刚改了权限）。
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    void initNativeNotifications();
+
+    let timer = 0;
+    const sync = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        void syncNativeReminders(stateRef.current.tasks).catch(() => {
+          // 权限没给或系统拒绝时静默失败，网页那套提醒仍在跑。
+        });
+      }, 400);
+    };
+
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [state.tasks, state.settings]);
 
   const scheduledTasks = useMemo(
     () => state.tasks.filter(isTaskScheduled),
@@ -587,6 +618,21 @@ export default function App() {
   };
 
   const enableNotifications = async () => {
+    if (isNativeApp()) {
+      const granted = await ensureNativePermission();
+      if (!granted) {
+        showToast("通知权限被拒绝，请到系统设置里允许 Dayflow 发通知", "error");
+        return;
+      }
+      setNotificationState("granted");
+      const count = await syncNativeReminders(stateRef.current.tasks).catch(() => 0);
+      showToast(
+        count > 0
+          ? `系统提醒已开启，已排入 ${count} 条`
+          : "系统提醒已开启；当前没有需要提醒的已排期任务",
+      );
+      return;
+    }
     const result = await requestNotificationPermission();
     setNotificationState(result);
     if (result === "granted") {
@@ -596,6 +642,19 @@ export default function App() {
       showToast("通知权限被拒绝，可以在浏览器设置里重新开启", "error");
     } else if (result === "unsupported") {
       showToast("当前浏览器不支持系统通知", "error");
+    }
+  };
+
+  const testNotification = async () => {
+    if (!isNativeApp()) {
+      showToast("只有装进 App 才能用系统通知", "error");
+      return;
+    }
+    const ok = await sendTestNotification().catch(() => false);
+    if (ok) {
+      showToast("10 秒后收到一条测试通知，建议现在锁屏");
+    } else {
+      showToast("发不出去：先允许通知权限，再关掉电池优化", "error");
     }
   };
 
@@ -751,6 +810,8 @@ export default function App() {
         onSave={handleSaveSettings}
         onSaveKey={handleSaveKey}
         onEnableNotifications={enableNotifications}
+        onTestNotification={testNotification}
+        nativeApp={isNativeApp()}
         onExport={handleExport}
         onImport={handleImport}
       />

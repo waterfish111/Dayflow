@@ -62,6 +62,8 @@ export function SettingsPanel({
   onSave,
   onSaveKey,
   onEnableNotifications,
+  onTestNotification,
+  nativeApp,
   onExport,
   onImport,
 }: {
@@ -73,6 +75,8 @@ export function SettingsPanel({
   onSave: (settings: Settings) => void;
   onSaveKey: (key: string) => void;
   onEnableNotifications: () => void;
+  onTestNotification: () => void;
+  nativeApp: boolean;
   onExport: () => void;
   onImport: (file: File) => void;
 }) {
@@ -287,7 +291,11 @@ export function SettingsPanel({
           <div className="settings-section-head">
             <div>
               <h3>提醒</h3>
-              <p>每天汇总今天的任务；固定日程和截止任务提前两小时提醒。</p>
+              <p>
+                {nativeApp
+                  ? "App 里用系统通知：任务开始前 10 分钟提醒，锁屏也会响。"
+                  : "每天汇总今天的任务；固定日程和截止任务提前两小时提醒。"}
+              </p>
             </div>
             <button
               type="button"
@@ -302,6 +310,18 @@ export function SettingsPanel({
                   : "开启系统通知"}
             </button>
           </div>
+          {nativeApp ? (
+            <div className="settings-inline">
+              <button
+                type="button"
+                className="button button--ghost button--small"
+                onClick={onTestNotification}
+              >
+                <Icon name="bell" size={15} />
+                发送测试通知（10 秒后）
+              </button>
+            </div>
+          ) : null}
           <div className="settings-inline">
             <label className="field">
               <span>每日汇总</span>
@@ -335,7 +355,9 @@ export function SettingsPanel({
             </label>
           </div>
           <p className="settings-muted">
-            网页通知需要 HTTPS；手机通过局域网 HTTP 打开时，系统通知可能不可用。
+            {nativeApp
+              ? "到点没响时按顺序检查：系统设置里允许 Dayflow 发通知、关闭电池优化、允许「闹钟和提醒」。"
+              : "网页通知需要 HTTPS；手机通过局域网 HTTP 打开时，系统通知可能不可用。"}
           </p>
         </section>
 
