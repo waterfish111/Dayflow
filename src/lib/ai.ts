@@ -1,5 +1,6 @@
 import type { AiParseResult, ParsedItem, Settings } from "../types";
 import { todayKey, WEEKDAYS_CN } from "./date";
+import { apiUrl } from "./api";
 
 const TIME_RE = /^\d{2}:\d{2}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -34,7 +35,7 @@ export async function parseWithAI(
   // 两者都没有时，由服务端返回一句明确的错误。
   const key = apiKey.trim();
   const today = new Date();
-  const response = await fetch("/api/ai/parse", {
+  const response = await fetch(apiUrl("/api/ai/parse"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

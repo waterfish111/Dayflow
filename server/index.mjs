@@ -19,6 +19,31 @@ const port = Number(process.env.PORT || 5173);
 
 app.use(express.json({ limit: "1mb" }));
 
+// 装进 App 以后页面源是 http://localhost，请求服务器属跨源，需要放行。
+// 只放行 WebView / 本机来源，不写成 *，避免任意网站直接刷演示额度。
+const ALLOWED_ORIGINS = new Set([
+  "http://localhost",
+  "https://localhost",
+  "capacitor://localhost",
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const sameOrigin = origin && origin === `http://${req.headers.host}`;
+  if (origin && (ALLOWED_ORIGINS.has(origin) || sameOrigin)) {
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Vary", "Origin");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, x-deepseek-key");
+    res.set("Access-Control-Max-Age", "600");
+  }
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 // 接口响应不进任何缓存：里面带着演示剩余次数，缓存会串号。
 app.use("/api", (_req, res, next) => {
   res.set("Cache-Control", "no-store");

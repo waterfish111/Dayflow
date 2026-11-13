@@ -22,6 +22,7 @@ import {
   saveState,
 } from "./data/storage";
 import { parseWithAI } from "./lib/ai";
+import { apiUrl } from "./lib/api";
 import {
   checkReminders,
   notificationPermission,
@@ -104,7 +105,7 @@ export default function App() {
   // 问一下服务端有没有开共享演示额度：有的话，前端就不再催用户填 Key。
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/health")
+    fetch(apiUrl("/api/health"))
       .then((response) => (response.ok ? response.json() : null))
       .then((data: { demo?: boolean; demoLimit?: number } | null) => {
         if (cancelled || !data) return;

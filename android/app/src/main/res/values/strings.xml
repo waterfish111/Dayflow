@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dayflow</string>
+    <string name="title_activity_main">Dayflow</string>
+    <string name="package_name">com.waterfish111.dayflow</string>
+    <string name="custom_url_scheme">com.waterfish111.dayflow</string>
+</resources>

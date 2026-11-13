@@ -13,3 +13,6 @@ dist
 .deploy
 .verify
 .check
+
+# 打包临时脚本（图标生成、签名材料）
+.build
