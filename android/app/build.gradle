@@ -16,10 +16,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // Fixed debug key so every CI build installs over the previous one.
+        // This is a throwaway key committed on purpose; it is not a release key.
+        debug {
+            storeFile file("dayflow-debug.keystore")
+            storePassword "dayflow-debug"
+            keyAlias "dayflow"
+            keyPassword "dayflow-debug"
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.debug
         }
     }
 }
