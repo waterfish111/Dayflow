@@ -56,3 +56,18 @@ VITE_API_BASE=http://新地址 pnpm build
 ```
 
 注意网页版仍然用相对路径（同源），只有 App 里才会用到这个绝对地址。
+
+## 服务端要配合的两件事
+
+1. **CORS**：App 的页面源是 `http://localhost`，请求服务器属跨源。`server/index.mjs` 里已放行 `http://localhost` 与 `capacitor://localhost`，并对 `OPTIONS` 预检返回 204。部署后可以这样自检：
+
+   ```bash
+   curl -i -X OPTIONS http://39.106.48.233/api/ai/parse \
+     -H "Origin: http://localhost" \
+     -H "Access-Control-Request-Method: POST" \
+     -H "Access-Control-Request-Headers: content-type,x-deepseek-key"
+   # 期望：204，且带 Access-Control-Allow-Origin: http://localhost
+   ```
+
+2. **明文 HTTP**：`AndroidManifest.xml` 里 `usesCleartextTraffic="true"`、`capacitor.config.ts` 里 `cleartext: true`，都是为了能访问 `http://` 的服务器。上线 HTTPS 后应当关掉。
+

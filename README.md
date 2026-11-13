@@ -16,6 +16,10 @@
 
 > IP 直连版本走的是 HTTP，Service Worker 只在 HTTPS 下生效，所以「添加到桌面 / 离线缓存 / 浏览器通知」在这个地址上不可用；配好域名和证书后即可恢复。
 
+## Android App
+
+同一套代码用 Capacitor 打成 Android 安装包（WebView 套壳，界面与 API 完全复用）。安装包由 CI 构建，到 **Actions → Android APK** 的最新一次运行里下载 Artifacts。安装、限制与本地构建见 [docs/ANDROID.md](docs/ANDROID.md)。
+
 | 自然语言 → 草案确认 | 周视图自动排期 | 手机端 390px |
 |---|---|---|
 | <img src="docs/screenshots/01-draft.png" width="300" alt="草案确认：4 条解析结果，低置信度条目默认不勾选"> | <img src="docs/screenshots/02-week.png" width="420" alt="周视图：自动排期结果与待办池"> | <img src="docs/screenshots/03-mobile.png" width="150" alt="390px 手机端布局"> |
