@@ -24,6 +24,7 @@ import {
 import { parseWithAI } from "./lib/ai";
 import { apiUrl } from "./lib/api";
 import {
+  diagnoseReminders,
   ensureNativePermission,
   initNativeNotifications,
   isNativeApp,
@@ -86,6 +87,7 @@ export default function App() {
     limit: number;
   } | null>(null);
   const [reminderCount, setReminderCount] = useState<number | null>(null);
+  const [diagnostics, setDiagnostics] = useState<string[] | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const plannerRef = useRef<HTMLTextAreaElement | null>(null);
@@ -651,18 +653,25 @@ export default function App() {
     }
   };
 
-  const testNotification = async () => {
+  const testNotification = async (delayMs = 10_000) => {
     if (!isNativeApp()) {
       showToast("只有装进 App 才能用系统通知", "error");
       return;
     }
-    const ok = await sendTestNotification().catch(() => false);
+    const ok = await sendTestNotification(delayMs).catch(() => false);
     if (ok) {
-      showToast("10 秒后收到一条测试通知，建议现在锁屏");
+      showToast(
+        delayMs > 3_000 ? "10 秒后收到一条测试通知，建议现在锁屏" : "测试通知已发出",
+      );
       void pendingReminderCount().then(setReminderCount);
     } else {
       showToast("发不出去：先允许通知权限，再关掉电池优化", "error");
     }
+  };
+
+  const runDiagnostics = async () => {
+    const lines = await diagnoseReminders().catch(() => ["读取失败"]);
+    setDiagnostics(lines);
   };
 
   const handleExport = () => {
@@ -818,6 +827,8 @@ export default function App() {
         onSaveKey={handleSaveKey}
         onEnableNotifications={enableNotifications}
         onTestNotification={testNotification}
+        onDiagnose={runDiagnostics}
+        diagnostics={diagnostics}
         nativeApp={isNativeApp()}
         reminderCount={reminderCount}
         onExport={handleExport}

@@ -31,6 +31,17 @@ function startDate(task: ScheduleItem): Date | null {
 }
 
 let channelReady = false;
+let lastError = "";
+
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
 
 export async function initNativeNotifications(): Promise<void> {
   if (!isNativeApp() || channelReady) return;
@@ -121,35 +132,41 @@ export async function syncNativeReminders(tasks: ScheduleItem[]): Promise<number
   if (!isNativeApp()) return 0;
   await initNativeNotifications();
 
-  const desired = desiredNotifications(tasks);
-  const pending = await LocalNotifications.getPending();
-  const pendingById = new Map(pending.notifications.map((item) => [item.id, item]));
+  try {
+    const desired = desiredNotifications(tasks);
+    const pending = await LocalNotifications.getPending();
+    const pendingById = new Map(pending.notifications.map((item) => [item.id, item]));
 
-  const drop: { id: number }[] = [];
-  for (const item of pending.notifications) {
-    const next = desired.get(item.id);
-    if (!next) {
-      drop.push({ id: item.id });
-      continue;
+    const drop: { id: number }[] = [];
+    for (const item of pending.notifications) {
+      const next = desired.get(item.id);
+      if (!next) {
+        drop.push({ id: item.id });
+        continue;
+      }
+      // 同一条任务改了时间，提醒也要跟着换。
+      if (triggerTime(item) !== triggerTime(next)) {
+        drop.push({ id: item.id });
+      }
     }
-    // 同一条任务改了时间，提醒也要跟着换。
-    if (triggerTime(item) !== triggerTime(next)) {
-      drop.push({ id: item.id });
+    if (drop.length > 0) {
+      await LocalNotifications.cancel({ notifications: drop });
     }
-  }
-  if (drop.length > 0) {
-    await LocalNotifications.cancel({ notifications: drop });
-  }
 
-  const droppedIds = new Set(drop.map((item) => item.id));
-  const add = [...desired.values()].filter(
-    (item) => !pendingById.has(item.id) || droppedIds.has(item.id),
-  );
-  if (add.length > 0) {
-    await LocalNotifications.schedule({ notifications: add });
-  }
+    const droppedIds = new Set(drop.map((item) => item.id));
+    const add = [...desired.values()].filter(
+      (item) => !pendingById.has(item.id) || droppedIds.has(item.id),
+    );
+    if (add.length > 0) {
+      await LocalNotifications.schedule({ notifications: add });
+    }
 
-  return desired.size;
+    lastError = "";
+    return desired.size;
+  } catch (error) {
+    lastError = describeError(error);
+    return 0;
+  }
 }
 
 /** 当前系统里排了多少条，用来在设置里显示状态。 */
@@ -164,20 +181,75 @@ export async function pendingReminderCount(): Promise<number> {
 }
 
 /** 10 秒后发一条，用来验证权限、渠道和系统设置。 */
-export async function sendTestNotification(): Promise<boolean> {
+export async function sendTestNotification(delayMs = 10_000): Promise<boolean> {
   if (!isNativeApp()) return false;
   const granted = await ensureNativePermission();
-  if (!granted) return false;
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: 999_999,
-        title: "Dayflow 测试提醒",
-        body: "看到这条，说明锁屏提醒已经打通了。",
-        channelId: CHANNEL_ID,
-        schedule: { at: new Date(Date.now() + 10_000), allowWhileIdle: true },
-      },
-    ],
-  });
-  return true;
+  if (!granted) {
+    lastError = "通知权限未授予";
+    return false;
+  }
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: 999_999,
+          title: "Dayflow 测试提醒",
+          body: "看到这条，说明锁屏提醒已经打通了。",
+          channelId: CHANNEL_ID,
+          schedule: { at: new Date(Date.now() + Math.max(delayMs, 500)), allowWhileIdle: true },
+        },
+      ],
+    });
+    lastError = "";
+    return true;
+  } catch (error) {
+    lastError = describeError(error);
+    return false;
+  }
+}
+
+/** 把权限、渠道、排队情况一次性读出来，贴给开发者就能定位问题。 */
+export async function diagnoseReminders(): Promise<string[]> {
+  const lines: string[] = [`构建：${__APP_BUILD__}`];
+  lines.push(`平台：${Capacitor.getPlatform()}｜原生：${isNativeApp() ? "是" : "否"}`);
+  if (!isNativeApp()) return lines;
+
+  try {
+    const permission = await LocalNotifications.checkPermissions();
+    lines.push(`通知权限：${permission.display}`);
+  } catch (error) {
+    lines.push(`通知权限：读取失败（${describeError(error)}）`);
+  }
+
+  try {
+    const exact = await LocalNotifications.checkExactNotificationSetting();
+    lines.push(`精确闹钟：${exact.exact_alarm}`);
+  } catch {
+    lines.push("精确闹钟：系统没有这个开关");
+  }
+
+  try {
+    const channels = await LocalNotifications.listChannels();
+    const mine = channels.channels.find((channel) => channel.id === CHANNEL_ID);
+    lines.push(
+      mine
+        ? `通知渠道：${mine.id}（重要度 ${mine.importance}）`
+        : "通知渠道：还没创建",
+    );
+  } catch (error) {
+    lines.push(`通知渠道：读取失败（${describeError(error)}）`);
+  }
+
+  try {
+    const pending = await LocalNotifications.getPending();
+    lines.push(`已排入：${pending.notifications.length} 条`);
+    const next = pending.notifications[0];
+    const at = next?.schedule?.at;
+    if (at) lines.push(`下一条：${new Date(at).toLocaleString()}`);
+  } catch (error) {
+    lines.push(`已排入：读取失败（${describeError(error)}）`);
+  }
+
+  lines.push(`最近错误：${lastError || "无"}`);
+  return lines;
 }

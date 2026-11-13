@@ -63,6 +63,8 @@ export function SettingsPanel({
   onSaveKey,
   onEnableNotifications,
   onTestNotification,
+  onDiagnose,
+  diagnostics,
   nativeApp,
   reminderCount,
   onExport,
@@ -76,7 +78,9 @@ export function SettingsPanel({
   onSave: (settings: Settings) => void;
   onSaveKey: (key: string) => void;
   onEnableNotifications: () => void;
-  onTestNotification: () => void;
+  onTestNotification: (delayMs?: number) => void;
+  onDiagnose: () => void;
+  diagnostics: string[] | null;
   nativeApp: boolean;
   reminderCount: number | null;
   onExport: () => void;
@@ -313,13 +317,25 @@ export function SettingsPanel({
                     : "开启系统通知"}
               </button>
               {nativeApp ? (
-                <button
-                  type="button"
-                  className="settings-link"
-                  onClick={onTestNotification}
-                >
-                  发送测试通知
-                </button>
+                <div className="settings-links">
+                  <button
+                    type="button"
+                    className="settings-link"
+                    onClick={() => onTestNotification(1_000)}
+                  >
+                    立即测试
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-link"
+                    onClick={() => onTestNotification(10_000)}
+                  >
+                    10 秒后测试
+                  </button>
+                  <button type="button" className="settings-link" onClick={onDiagnose}>
+                    诊断
+                  </button>
+                </div>
               ) : null}
             </div>
           </div>
@@ -364,6 +380,13 @@ export function SettingsPanel({
                 }到点没响时检查：通知权限、电池优化、「闹钟和提醒」。`
               : "网页通知需要 HTTPS；手机通过局域网 HTTP 打开时，系统通知可能不可用。"}
           </p>
+          {nativeApp && diagnostics ? (
+            <div className="settings-diagnostics">
+              {diagnostics.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         <section className="settings-section">
