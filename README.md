@@ -66,6 +66,7 @@ autoSchedule(tasks, settings, { today: "2026-11-09" })
 | 线上 API | Vercel Serverless Functions |
 | AI | DeepSeek Chat Completions，JSON 结构化输出 |
 | 数据 | 浏览器 `localStorage`，local-first |
+| Android | Capacitor 8 套壳，GitHub Actions 云打包 debug APK（[说明](docs/ANDROID.md)） |
 | 测试 | Vitest（37 个单元测试，覆盖排期与日期工具） |
 | 基准与评测 | `pnpm bench` 排期耗时基准，`pnpm eval:ai` 解析准确率评测（24 条中文用例） |
 | CI | GitHub Actions：typecheck → test → build |

@@ -38,7 +38,12 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest 自带 Android SDK，只需接受许可，省掉一个易挂的第三方 action。
+      - name: Accept Android SDK licenses
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager --list_installed | head -20
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
