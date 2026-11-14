@@ -98,24 +98,22 @@ export async function checkReminders(state: AppState): Promise<void> {
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const digestMinutes = minutesFromTime(state.settings.digestTime);
   const digestKey = `digest:${today}`;
+  const inDnd = shouldSkipForDnd(state);
 
   if (
     !memory[digestKey] &&
+    !inDnd &&
     nowMinutes >= digestMinutes &&
     nowMinutes < digestMinutes + 30
   ) {
-    if (shouldSkipForDnd(state)) {
-      mark(memory, digestKey, "skipped");
-    } else {
-      const items = activeTodayItems(state);
-      const titles = items.slice(0, 8).map((item) => item.title);
-      const body =
-        items.length === 0
-          ? "今天还没有安排，打开 Dayflow 规划一下。"
-          : `${titles.join("、")}${items.length > 8 ? ` 等 ${items.length} 项` : ""}`;
-      await showAppNotification("今天的计划", body, digestKey);
-      mark(memory, digestKey, "sent");
-    }
+    const items = activeTodayItems(state);
+    const titles = items.slice(0, 8).map((item) => item.title);
+    const body =
+      items.length === 0
+        ? "今天还没有安排，打开 Dayflow 规划一下。"
+        : `${titles.join("、")}${items.length > 8 ? ` 等 ${items.length} 项` : ""}`;
+    await showAppNotification("今天的计划", body, digestKey);
+    mark(memory, digestKey, "sent");
   }
 
   for (const task of state.tasks) {
@@ -127,20 +125,17 @@ export async function checkReminders(state: AppState): Promise<void> {
       const key = reminderKey(task, "start");
       if (
         !memory[key] &&
+        !inDnd &&
         now >= reminderAt &&
         now < start &&
         task.date >= today
       ) {
-        if (shouldSkipForDnd(state)) {
-          mark(memory, key, "skipped");
-        } else {
-          await showAppNotification(
-            task.kind === "event" ? "会议即将开始" : "日程即将开始",
-            `${task.title} · ${task.start} 开始`,
-            key,
-          );
-          mark(memory, key, "sent");
-        }
+        await showAppNotification(
+          task.kind === "event" ? "会议即将开始" : "日程即将开始",
+          `${task.title} · ${task.start} 开始`,
+          key,
+        );
+        mark(memory, key, "sent");
       }
     }
 
@@ -148,17 +143,13 @@ export async function checkReminders(state: AppState): Promise<void> {
       const deadline = new Date(task.deadline);
       const reminderAt = new Date(deadline.getTime() - 2 * 60 * 60 * 1000);
       const key = reminderKey(task, "deadline");
-      if (!memory[key] && now >= reminderAt && now < deadline) {
-        if (shouldSkipForDnd(state)) {
-          mark(memory, key, "skipped");
-        } else {
-          await showAppNotification(
-            "截止时间快到了",
-            `${task.title} · ${task.deadline.replace("T", " ")} 截止`,
-            key,
-          );
-          mark(memory, key, "sent");
-        }
+      if (!memory[key] && !inDnd && now >= reminderAt && now < deadline) {
+        await showAppNotification(
+          "截止时间快到了",
+          `${task.title} · ${task.deadline.replace("T", " ")} 截止`,
+          key,
+        );
+        mark(memory, key, "sent");
       }
     }
   }

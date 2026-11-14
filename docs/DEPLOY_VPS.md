@@ -115,6 +115,7 @@ systemctl status dayflow                  # 状态
 DEMO_KEY=sk-换成你自己的低余额Key
 DEMO_DAILY_LIMIT=20
 DEMO_GLOBAL_LIMIT=200
+DEMO_TIME_ZONE=Asia/Shanghai
 
 # 2. 重启
 systemctl restart dayflow
@@ -122,8 +123,9 @@ systemctl restart dayflow
 
 行为：
 
-- 访客没填 Key → 用 `DEMO_KEY`，按 IP 每天 `DEMO_DAILY_LIMIT` 次
+- 访客没填 Key → 用 `DEMO_KEY`，强制使用 `deepseek-chat`，按 IP 每个自然日 `DEMO_DAILY_LIMIT` 次
 - 全站每天总次数还有一道闸：`DEMO_GLOBAL_LIMIT`（默认 200，0 = 关闭），防止换 IP 刷
+- 自然日默认按 `Asia/Shanghai` 切换，可用 `DEMO_TIME_ZONE` 覆盖
 - 页面顶部显示「演示模式 · 每天 20 次，无需 Key」；草案弹窗底部显示「演示额度剩余 N 次」
 - 用完返回 `429`，并提示去设置里填自己的 Key
 - 访客带了自己的 Key → 用他自己的，不计入演示额度

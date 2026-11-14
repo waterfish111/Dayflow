@@ -71,7 +71,7 @@ autoSchedule(tasks, settings, { today: "2026-11-09" })
 | AI | DeepSeek Chat Completions，JSON 结构化输出 |
 | 数据 | 浏览器 `localStorage`，local-first |
 | Android | Capacitor 8 套壳，GitHub Actions 云打包 debug APK（[说明](docs/ANDROID.md)） |
-| 测试 | Vitest（37 个单元测试，覆盖排期与日期工具） |
+| 测试 | Vitest + Node Test（37 个前端测试；后端覆盖 AI 清洗、模型白名单与额度回滚） |
 | 基准与评测 | `pnpm bench` 排期耗时基准，`pnpm eval:ai` 解析准确率评测（24 条中文用例） |
 | CI | GitHub Actions：typecheck → test → build |
 | PWA | Manifest、Service Worker、通知权限 |
@@ -135,11 +135,12 @@ pnpm preview    # 以生产模式启动本地服务
 DEMO_KEY=sk-你的低余额Key
 DEMO_DAILY_LIMIT=20    # 每个 IP 每天的次数，默认 20
 DEMO_GLOBAL_LIMIT=200  # 全站每天总次数，防止换 IP 刷；0 = 不限
+DEMO_TIME_ZONE=Asia/Shanghai # 每日额度的自然日边界
 ```
 
-配置后：没填 Key 的访客会自动使用 `DEMO_KEY`，按 IP 每天计数；页面顶部会显示「演示模式 · 每天 20 次」，草案弹窗底部会显示本次剩余次数。用完了返回 `429`，并提示去设置里填自己的 Key。填了自己 Key 的请求不计数。
+配置后：没填 Key 的访客会自动使用 `DEMO_KEY`，按 IP 每天计数；页面顶部会显示「演示模式 · 每天 20 次」，草案弹窗底部会显示本次剩余次数。用完了返回 `429`，并提示去设置里填自己的 Key。填了自己 Key 的请求不计数。演示额度强制使用 `deepseek-chat`，用户自己填 Key 时才允许切换到 `deepseek-reasoner`。
 
-实现见 `server/demo.mjs`（Key 选择 + 额度扣减）与 `server/ratelimit.mjs`（内存计数器）。计数存在进程内存里：重启清零、多实例不共享——单机 demo 够用，要抗刷得换 Redis。
+实现见 `server/demo.mjs`（Key 选择 + 额度预留/回滚）与 `server/ratelimit.mjs`（内存计数器）。请求失败会回滚已预留额度；计数存在进程内存里：重启清零、多实例不共享——单机 demo 够用，要抗刷得换 Redis。
 
 兼容旧变量名：只配 `DEEPSEEK_API_KEY` 时也会当作演示 Key，并同样受每日限额约束（不会再出现「配了环境变量就等于无限额度」的情况）。
 
@@ -158,6 +159,8 @@ pnpm test
 `src/lib/scheduler.test.ts` 覆盖：空日历放置、时间块回退、跳过占用、缓冲边界、粒度取整、每日上限、截止截断、指定日期不跨天、优先级排序、`taskIds` 重排、事件不占额度、重复规则展开（每天 / 每周 / 每 N 天 / until / 缺字段）。
 
 `src/lib/date.test.ts` 覆盖：跨月跨年加减、闰年、周起始、月视图 42 格、时间与分钟互转与夹取、免打扰跨零点。
+
+`server/ai.test.mjs` 与 `server/demo.test.mjs` 覆盖：AI 输出清洗、演示模型限制、上海自然日切换和失败额度回滚。
 
 CI 在每次 push 和 PR 上执行 `typecheck → test → build`。
 

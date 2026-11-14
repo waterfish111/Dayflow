@@ -186,6 +186,22 @@ a {
   background: var(--accent-deep);
 }
 
+.button--primary:disabled {
+  opacity: 1;
+  background: #dbe4dc;
+  color: #718077;
+  box-shadow: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid rgba(47, 107, 79, 0.55);
+  outline-offset: 2px;
+}
+
 .button--ghost {
   border-color: var(--line);
   background: rgba(255, 255, 255, 0.62);
@@ -362,7 +378,7 @@ a {
 }
 
 .planner-input-wrap textarea::placeholder {
-  color: rgba(239, 246, 238, 0.48);
+  color: rgba(239, 246, 238, 0.62);
 }
 
 .planner-submit {
@@ -374,8 +390,14 @@ a {
   box-shadow: none;
 }
 
-.planner-submit:hover {
+.planner-submit:not(:disabled):hover {
   background: #eff8ed;
+}
+
+.planner-submit:disabled {
+  border: 1px solid rgba(220, 235, 221, 0.2);
+  background: rgba(220, 235, 221, 0.15);
+  color: rgba(244, 248, 243, 0.78);
 }
 
 .planner-footer {
@@ -396,7 +418,7 @@ a {
 }
 
 .examples-label {
-  color: rgba(239, 246, 238, 0.44);
+  color: rgba(239, 246, 238, 0.58);
   font-size: 11px;
 }
 
@@ -435,14 +457,22 @@ a {
 
 .shortcut-hint {
   flex: 0 0 auto;
-  color: rgba(239, 246, 238, 0.4);
+  color: rgba(239, 246, 238, 0.56);
   font-size: 11px;
 }
 
 .demo-hint {
   flex: 0 0 auto;
-  color: rgba(239, 246, 238, 0.45);
+  color: rgba(239, 246, 238, 0.6);
   font-size: 11px;
+}
+
+.planner-footer .text-button {
+  color: #cfe4d3;
+}
+
+.planner-footer .text-button:hover {
+  color: #ffffff;
 }
 
 .inline-error {
@@ -654,12 +684,6 @@ a {
   min-width: 0;
 }
 
-.week-range-label {
-  margin-bottom: 9px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -725,8 +749,14 @@ a {
   flex: 1;
   min-height: 42px;
   place-items: center;
-  color: #c5cec5;
-  font-size: 10px;
+}
+
+.week-empty::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  border-radius: 99px;
+  background: #e1e7df;
 }
 
 .week-add {
@@ -800,7 +830,7 @@ a {
 
 .calendar-item-time {
   color: var(--muted-2);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.015em;
 }
@@ -1262,7 +1292,7 @@ a {
   gap: 4px;
   margin-top: 5px;
   color: var(--muted-2);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .pool-item-meta span {
@@ -1420,7 +1450,7 @@ a {
 .modal-subtitle {
   margin: 6px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -1442,7 +1472,7 @@ a {
 
 .field > span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -1611,13 +1641,13 @@ a {
 
 .settings-section-head h3 {
   margin: 0 0 3px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .settings-section-head p {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -1635,7 +1665,7 @@ a {
 .settings-muted {
   margin: 8px 0 0;
   color: var(--muted-2);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -2186,14 +2216,23 @@ a {
   }
 
   .today-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 7px;
     margin: 11px 0 13px;
   }
 
   .today-stat {
-    min-height: 50px;
+    align-content: center;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 1px 5px;
+    min-height: 54px;
     padding: 10px 12px;
     border-radius: 12px;
+  }
+
+  .today-stat-label {
+    flex-basis: 100%;
   }
 
   .today-stat strong {
@@ -2201,8 +2240,7 @@ a {
   }
 
   .today-stat--accent {
-    grid-column: 1 / -1;
-    min-height: 38px;
+    display: none;
   }
 
   .calendar-card,
@@ -2381,12 +2419,28 @@ a {
     min-width: 0;
   }
 
+  .settings-inline .field:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
   .block-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .block-row input[type="time"] {
+    width: 100%;
   }
 
   .block-row .block-label {
-    flex: 1 1 100%;
+    grid-row: 2;
+    grid-column: 1 / 4;
+  }
+
+  .block-row > .icon-button {
+    grid-row: 1;
+    grid-column: 4;
   }
 
   .draft-actions {

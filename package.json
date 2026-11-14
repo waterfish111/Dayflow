@@ -12,7 +12,9 @@
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "preview": "cross-env NODE_ENV=production node server/index.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "test": "vitest run",
+    "test": "vitest run && node --test server/ai.test.mjs server/demo.test.mjs",
+    "test:web": "vitest run",
+    "test:server": "node --test server/ai.test.mjs server/demo.test.mjs",
     "test:watch": "vitest",
     "bench": "esbuild scripts/bench-scheduler.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/bench.mjs && node node_modules/.cache/bench.mjs",
     "eval:ai": "node scripts/eval-ai.mjs"

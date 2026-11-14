@@ -28,7 +28,11 @@ export function Header({
       <div className="header-date">{formatFullDate(new Date())}</div>
 
       <div className="header-actions">
-        <button className="button button--ghost header-ai" onClick={onFocusPlanner}>
+        <button
+          className="button button--ghost header-ai"
+          onClick={onFocusPlanner}
+          aria-label="聚焦自然语言计划输入框"
+        >
           <Icon name="sparkles" size={18} />
           <span>自然语言计划</span>
         </button>

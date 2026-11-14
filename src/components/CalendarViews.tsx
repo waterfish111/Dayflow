@@ -3,7 +3,6 @@ import {
   addDays,
   formatMonthDay,
   formatMonthTitle,
-  formatWeekRange,
   isToday,
   minutesFromTime,
   monthMatrix,
@@ -108,7 +107,6 @@ export function WeekView({
 
   return (
     <div className="week-view">
-      <div className="week-range-label">{formatWeekRange(dates)}</div>
       <div className="week-grid">
         {dates.map((date) => {
           const key = toDateKey(date);
@@ -142,7 +140,7 @@ export function WeekView({
               </button>
               <div className="week-day-body">
                 {items.length === 0 ? (
-                  <div className="week-empty">空白</div>
+                  <div className="week-empty" aria-hidden="true" />
                 ) : (
                   items.map((task) => (
                     <CalendarItemChip

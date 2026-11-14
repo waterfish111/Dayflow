@@ -3,7 +3,8 @@ import {
   LocalNotifications,
   type LocalNotificationSchema,
 } from "@capacitor/local-notifications";
-import type { ScheduleItem } from "../types";
+import type { ScheduleItem, Settings } from "../types";
+import { isWithinDnd } from "./date";
 
 /** 只有装进 App 才走系统通知；网页继续用页面内轮询。 */
 export function isNativeApp(): boolean {
@@ -87,30 +88,77 @@ export async function ensureNativePermission(): Promise<boolean> {
   return true;
 }
 
-function toNotification(task: ScheduleItem, id: number): LocalNotificationSchema | null {
+function timeKey(date: Date): string {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes(),
+  ).padStart(2, "0")}`;
+}
+
+function moveAfterDnd(trigger: Date, settings?: Settings): Date {
+  if (
+    !settings ||
+    !isWithinDnd(timeKey(trigger), settings.dndStart, settings.dndEnd)
+  ) {
+    return trigger;
+  }
+  const [hours, minutes] = settings.dndEnd.split(":").map(Number);
+  const delayed = new Date(trigger);
+  delayed.setHours(hours, minutes, 0, 0);
+  if (delayed.getTime() <= trigger.getTime()) {
+    delayed.setDate(delayed.getDate() + 1);
+  }
+  return delayed;
+}
+
+function toNotification(
+  task: ScheduleItem,
+  id: number,
+  settings?: Settings,
+): LocalNotificationSchema | null {
   const startsAt = startDate(task);
   if (!startsAt) return null;
-  const trigger = new Date(startsAt.getTime() - REMINDER_LEAD_MINUTES * 60_000);
+  const trigger = moveAfterDnd(
+    new Date(startsAt.getTime() - REMINDER_LEAD_MINUTES * 60_000),
+    settings,
+  );
   if (trigger.getTime() <= Date.now() + 5_000) return null;
+  if (trigger.getTime() >= startsAt.getTime()) return null;
+  const leadMinutes = Math.max(
+    1,
+    Math.round((startsAt.getTime() - trigger.getTime()) / 60_000),
+  );
   return {
     id,
     title: task.title,
-    body: `${REMINDER_LEAD_MINUTES} 分钟后开始 · ${task.category}`,
+    body:
+      leadMinutes <= 1
+        ? `即将开始 · ${task.category}`
+        : `约 ${leadMinutes} 分钟后开始 · ${task.category}`,
+    channelId: CHANNEL_ID,
     schedule: { at: trigger, allowWhileIdle: true },
     extra: { taskId: task.id, date: task.date },
   };
 }
 
-function desiredNotifications(tasks: ScheduleItem[]): Map<number, LocalNotificationSchema> {
+function desiredNotifications(
+  tasks: ScheduleItem[],
+  settings?: Settings,
+): Map<number, LocalNotificationSchema> {
+  const candidates = tasks
+    .filter((task) => !task.completed)
+    .map((task) => toNotification(task, hashId(task.id), settings))
+    .filter(
+      (item): item is LocalNotificationSchema & { schedule: { at: Date } } =>
+        Boolean(item),
+    )
+    .sort((a, b) => triggerTime(a) - triggerTime(b))
+    .slice(0, MAX_NOTIFICATIONS);
+
   const desired = new Map<number, LocalNotificationSchema>();
-  for (const task of tasks) {
-    if (task.completed) continue;
-    if (desired.size >= MAX_NOTIFICATIONS) break;
-    let id = hashId(task.id);
+  for (const notification of candidates) {
+    let id = notification.id;
     while (desired.has(id)) id = (id + 1) % 2_147_483_647;
-    const notification = toNotification(task, id);
-    if (!notification) continue;
-    desired.set(id, notification);
+    desired.set(id, { ...notification, id });
   }
   return desired;
 }
@@ -127,12 +175,15 @@ function triggerTime(notification: LocalNotificationSchema): number {
  * 千万不要「全部取消再重排」——App 一进后台 WebView 会被挂起，
  * 取消跑完了、重排没跑完，锁屏之后就没有任何提醒了。
  */
-export async function syncNativeReminders(tasks: ScheduleItem[]): Promise<number> {
+export async function syncNativeReminders(
+  tasks: ScheduleItem[],
+  settings?: Settings,
+): Promise<number> {
   if (!isNativeApp()) return 0;
   await initNativeNotifications();
 
   try {
-    const desired = desiredNotifications(tasks);
+    const desired = desiredNotifications(tasks, settings);
     const pending = await LocalNotifications.getPending();
     const pendingById = new Map(pending.notifications.map((item) => [item.id, item]));
 
@@ -188,12 +239,16 @@ export async function sendTestNotification(delayMs = 10_000): Promise<boolean> {
     return false;
   }
   try {
+    await LocalNotifications.cancel({
+      notifications: [{ id: 999_999 }],
+    }).catch(() => undefined);
     await LocalNotifications.schedule({
       notifications: [
         {
           id: 999_999,
           title: "Dayflow 测试提醒",
           body: "看到这条，说明锁屏提醒已经打通了。",
+          channelId: CHANNEL_ID,
           schedule: { at: new Date(Date.now() + Math.max(delayMs, 500)), allowWhileIdle: true },
         },
       ],
@@ -241,7 +296,9 @@ export async function diagnoseReminders(): Promise<string[]> {
   try {
     const pending = await LocalNotifications.getPending();
     lines.push(`已排入：${pending.notifications.length} 条`);
-    const next = pending.notifications[0];
+    const next = [...pending.notifications].sort(
+      (a, b) => triggerTime(a) - triggerTime(b),
+    )[0];
     const at = next?.schedule?.at;
     if (at) lines.push(`下一条：${new Date(at).toLocaleString()}`);
   } catch (error) {
@@ -250,30 +307,4 @@ export async function diagnoseReminders(): Promise<string[]> {
 
   lines.push(`最近错误：${lastError || "无"}`);
   return lines;
-}
-
-/**
- * 启动自检：排一条 60 秒后的通知。装好 App 打开一次、锁屏，等一分钟，
- * 收到就说明系统提醒链路是通的，收不到就是权限/系统后台限制。
- */
-export async function scheduleStartupProbe(): Promise<boolean> {
-  if (!isNativeApp()) return false;
-  await initNativeNotifications();
-  try {
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          id: 999_998,
-          title: "自检提醒 · 60 秒后",
-          body: `锁屏也能收到这条，说明提醒链路通了（构建 ${__APP_BUILD__}）`,
-          schedule: { at: new Date(Date.now() + 60_000), allowWhileIdle: true },
-        },
-      ],
-    });
-    lastError = "";
-    return true;
-  } catch (error) {
-    lastError = describeError(error);
-    return false;
-  }
 }

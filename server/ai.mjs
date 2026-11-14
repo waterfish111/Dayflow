@@ -6,16 +6,113 @@ export class AiError extends Error {
   }
 }
 
+export const ALLOWED_MODELS = new Set([
+  "deepseek-chat",
+  "deepseek-reasoner",
+]);
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const PRIORITIES = new Set(["high", "medium", "low"]);
+const RECURRENCE_TYPES = new Set([
+  "none",
+  "daily",
+  "weekdays",
+  "weekly",
+  "interval",
+]);
+
+function text(value, maxLength) {
+  if (typeof value !== "string") return undefined;
+  const clean = value.trim();
+  return clean ? clean.slice(0, maxLength) : undefined;
+}
+
+function validDateKey(value) {
+  if (typeof value !== "string" || !DATE_RE.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+  );
+}
+
+function validTime(value) {
+  return typeof value === "string" && TIME_RE.test(value);
+}
+
+function pickDate(value) {
+  return validDateKey(value) ? value : undefined;
+}
+
+function pickTime(value) {
+  return validTime(value) ? value : undefined;
+}
+
+function pickDeadline(value) {
+  if (typeof value !== "string") return undefined;
+  const [date, timePart, extra] = value.split("T");
+  if (extra !== undefined || !validDateKey(date)) return undefined;
+  if (timePart === undefined) return date;
+  return validTime(timePart) ? `${date}T${timePart}` : undefined;
+}
+
+function normalizeRecurrence(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { type: "none" };
+  }
+  const type = text(value.type, 20);
+  if (!type || !RECURRENCE_TYPES.has(type) || type === "none") {
+    return { type: "none" };
+  }
+  const recurrence = { type };
+  if (type === "interval") {
+    const interval = Math.round(Number(value.intervalDays));
+    recurrence.intervalDays = Number.isFinite(interval)
+      ? Math.min(90, Math.max(1, interval))
+      : 2;
+  }
+  if (type === "weekly") {
+    const weekdays = Array.isArray(value.weekdays)
+      ? [...new Set(
+          value.weekdays
+            .map((day) => Number(day))
+            .filter(
+              (day) => Number.isInteger(day) && day >= 0 && day <= 6,
+            ),
+        )]
+      : [];
+    if (weekdays.length === 0) return { type: "none" };
+    recurrence.weekdays = weekdays;
+  }
+  const until = pickDate(value.until);
+  if (until) recurrence.until = until;
+  return recurrence;
+}
+
+function promptJson(value, maxLength = 2400) {
+  if (!value) return "未提供";
+  try {
+    return JSON.stringify(value).slice(0, maxLength);
+  } catch {
+    return "未提供";
+  }
+}
+
 export function buildPrompt(payload) {
   const { text, today, weekday, timezone, settings } = payload;
   const workday = settings?.workday
-    ? JSON.stringify(settings.workday)
+    ? promptJson(settings.workday)
     : "未提供";
   const weekend = settings?.weekend
-    ? JSON.stringify(settings.weekend)
+    ? promptJson(settings.weekend)
     : "未提供";
   const categories = Array.isArray(settings?.categories)
-    ? settings.categories.join("、")
+    ? settings.categories
+        .filter((item) => typeof item === "string")
+        .slice(0, 20)
+        .join("、")
+        .slice(0, 240)
     : "工作、学习、生活、运动";
 
   return `你是一个严谨的中文日程解析器。把用户的自然语言转换成结构化日程草案。
@@ -78,62 +175,74 @@ ${text}`;
 }
 
 export function normalizeAiResult(value) {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("模型返回的内容不是对象");
   }
 
-  const items = Array.isArray(value.items) ? value.items : [];
+  const items = Array.isArray(value.items)
+    ? value.items.filter(
+        (item) => item && typeof item === "object" && !Array.isArray(item),
+      ).slice(0, 50)
+    : [];
   const questions = Array.isArray(value.questions)
-    ? value.questions.filter((item) => typeof item === "string")
+    ? value.questions
+        .map((item) => text(item, 200))
+        .filter(Boolean)
+        .slice(0, 3)
     : [];
 
   return {
     items: items.map((item) => {
-      const priority = ["high", "medium", "low"].includes(item.priority)
-        ? item.priority
-        : "medium";
+      const priority = PRIORITIES.has(item.priority) ? item.priority : "medium";
       const kind = item.kind === "event" ? "event" : "task";
+      const pool = Boolean(item.pool);
+      const start = pickTime(item.start);
+      const end = pickTime(item.end);
+      const estimated = Math.round(Number(item.estimatedMinutes));
       return {
-        title: String(item.title || "未命名任务").slice(0, 160),
+        title: text(item.title, 160) ?? "未命名任务",
         kind,
-        pool: Boolean(item.pool),
-        date: typeof item.date === "string" ? item.date : undefined,
-        start: typeof item.start === "string" ? item.start : undefined,
-        end: typeof item.end === "string" ? item.end : undefined,
+        pool,
+        date: pool ? undefined : pickDate(item.date),
+        start: pool ? undefined : start,
+        end:
+          pool || !start || !end || end <= start
+            ? undefined
+            : end,
         estimatedMinutes:
-          Number.isFinite(Number(item.estimatedMinutes)) &&
-          Number(item.estimatedMinutes) > 0
-            ? Number(item.estimatedMinutes)
+          Number.isFinite(estimated) && estimated > 0
+            ? Math.min(600, Math.max(15, estimated))
             : undefined,
         priority,
-        category:
-          typeof item.category === "string" ? item.category : undefined,
-        deadline:
-          typeof item.deadline === "string" ? item.deadline : undefined,
+        category: text(item.category, 40),
+        deadline: pool ? undefined : pickDeadline(item.deadline),
         locked: Boolean(item.locked),
-        notes: typeof item.notes === "string" ? item.notes : undefined,
-        location:
-          typeof item.location === "string" ? item.location : undefined,
-        link: typeof item.link === "string" ? item.link : undefined,
-        recurrence:
-          item.recurrence && typeof item.recurrence === "object"
-            ? item.recurrence
-            : { type: "none" },
-        confidence: Math.max(
-          0,
-          Math.min(1, Number(item.confidence ?? 0.5)),
-        ),
+        notes: text(item.notes, 1000),
+        location: text(item.location, 200),
+        link: text(item.link, 500),
+        recurrence: normalizeRecurrence(item.recurrence),
+        confidence: Number.isFinite(Number(item.confidence))
+          ? Math.max(0, Math.min(1, Number(item.confidence)))
+          : 0.5,
         assumptions: Array.isArray(item.assumptions)
-          ? item.assumptions.filter((entry) => typeof entry === "string")
+          ? item.assumptions
+              .map((entry) => text(entry, 200))
+              .filter(Boolean)
+              .slice(0, 5)
           : [],
       };
     }),
     questions,
-    summary: typeof value.summary === "string" ? value.summary : "",
+    summary: text(value.summary, 500) ?? "",
   };
 }
 
-export async function parseSchedule(payload, key) {
+export function selectModel(value, isDemo = false) {
+  if (isDemo) return "deepseek-chat";
+  return ALLOWED_MODELS.has(value) ? value : "deepseek-chat";
+}
+
+export async function parseSchedule(payload, key, options = {}) {
   const cleanKey = String(key ?? "").trim();
   if (!cleanKey) {
     throw new AiError(
@@ -161,7 +270,7 @@ export async function parseSchedule(payload, key) {
           Authorization: `Bearer ${cleanKey}`,
         },
         body: JSON.stringify({
-          model: payload?.model || "deepseek-chat",
+          model: selectModel(payload?.model, Boolean(options.isDemo)),
           temperature: 0.1,
           max_tokens: 2400,
           response_format: { type: "json_object" },
@@ -182,13 +291,14 @@ export async function parseSchedule(payload, key) {
     );
 
     if (!response.ok) {
-      const detail = await response.text();
       const message =
         response.status === 401 || response.status === 403
           ? "DeepSeek Key 无效或没有权限，请在设置里检查。"
           : response.status === 429
             ? "DeepSeek 请求太频繁或额度不足，请稍后再试。"
-            : `DeepSeek 请求失败（${response.status}）：${detail.slice(0, 180)}`;
+            : response.status >= 500
+              ? `DeepSeek 服务暂时不可用（${response.status}）。`
+              : `DeepSeek 请求未通过校验（${response.status}）。`;
       throw new AiError(response.status, message);
     }
 
@@ -220,7 +330,7 @@ export async function parseSchedule(payload, key) {
     }
     throw new AiError(
       502,
-      `解析失败：${String(error?.message || error).slice(0, 180)}`,
+      "暂时无法连接 AI 服务，请稍后重试。",
     );
   } finally {
     clearTimeout(timeout);

@@ -28,8 +28,8 @@ import {
   ensureNativePermission,
   initNativeNotifications,
   isNativeApp,
+  nativePermissionGranted,
   pendingReminderCount,
-  scheduleStartupProbe,
   sendTestNotification,
   syncNativeReminders,
 } from "./lib/nativeNotifications";
@@ -154,7 +154,10 @@ export default function App() {
       if (document.visibilityState !== "visible") return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        void syncNativeReminders(stateRef.current.tasks)
+        void syncNativeReminders(
+          stateRef.current.tasks,
+          stateRef.current.settings,
+        )
           .then((count) => setReminderCount(count))
           .catch(() => {
             // 权限没给或系统拒绝时静默失败，网页那套提醒仍在跑。
@@ -170,31 +173,40 @@ export default function App() {
     };
   }, [state.tasks, state.settings]);
 
-  // 每次冷启动都排一条 60 秒后的自检通知，并把状态显示在首页，
-  // 这样不用翻设置也能判断「到底排没排进去」「权限给没给」。
+  // 启动时只读取通知状态：不主动弹权限框，也不安排自检通知。
+  // 权限申请和测试通知都留给用户明确点击后再执行。
   useEffect(() => {
     if (!isNativeApp()) return;
     let cancelled = false;
     void (async () => {
-      const granted = await ensureNativePermission().catch(() => false);
-      const probed = await scheduleStartupProbe().catch(() => false);
-      const lines = await diagnoseReminders().catch(() => []);
+      await initNativeNotifications();
+      const granted = await nativePermissionGranted().catch(() => false);
       if (cancelled) return;
+      if (!granted) {
+        setNativeStatus(null);
+        return;
+      }
+      setNotificationState("granted");
+      const [count, lines] = await Promise.all([
+        pendingReminderCount().catch(() => 0),
+        diagnoseReminders().catch(() => []),
+      ]);
+      if (cancelled) return;
+      setReminderCount(count);
       setNativeStatus(
         [
-          granted ? "权限已给" : "权限被拒",
-          probed ? "已排入 60 秒自检" : "自检排入失败",
-          ...lines.filter((line) => line.startsWith("已排入")),
+          "系统提醒已开启",
+          ...lines.filter(
+            (line) =>
+              line.startsWith("精确闹钟") || line.startsWith("已排入"),
+          ),
         ].join(" · "),
       );
-      if (!probed) {
-        showToast("自检提醒没排进去，点设置里的「诊断」看原因", "error");
-      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [showToast]);
+  }, []);
 
   const scheduledTasks = useMemo(
     () => state.tasks.filter(isTaskScheduled),
@@ -660,7 +672,10 @@ export default function App() {
         return;
       }
       setNotificationState("granted");
-      const count = await syncNativeReminders(stateRef.current.tasks).catch(() => 0);
+      const count = await syncNativeReminders(
+        stateRef.current.tasks,
+        stateRef.current.settings,
+      ).catch(() => 0);
       setReminderCount(count);
       showToast(
         count > 0
