@@ -64,7 +64,13 @@ export async function initNativeNotifications(): Promise<void> {
 export async function nativePermissionGranted(): Promise<boolean> {
   if (!isNativeApp()) return false;
   const status = await LocalNotifications.checkPermissions();
-  return status.display === "granted";
+  if (status.display !== "granted") return false;
+  try {
+    const exact = await LocalNotifications.checkExactNotificationSetting();
+    return exact.exact_alarm === "granted";
+  } catch {
+    return true;
+  }
 }
 
 /** 申请通知权限；Android 12+ 顺带检查「精确闹钟」，没有就引导去开。 */
@@ -81,10 +87,16 @@ export async function ensureNativePermission(): Promise<boolean> {
     const exact = await LocalNotifications.checkExactNotificationSetting();
     if (exact.exact_alarm !== "granted") {
       await LocalNotifications.changeExactNotificationSetting();
+      const updated = await LocalNotifications.checkExactNotificationSetting();
+      if (updated.exact_alarm !== "granted") {
+        lastError = "通知权限已允许，但「闹钟和提醒」仍未开启";
+        return false;
+      }
     }
   } catch {
     // 低版本 Android 没有这个开关，忽略。
   }
+  lastError = "";
   return true;
 }
 
@@ -135,6 +147,7 @@ function toNotification(
         ? `即将开始 · ${task.category}`
         : `约 ${leadMinutes} 分钟后开始 · ${task.category}`,
     channelId: CHANNEL_ID,
+    isExactMandatory: true,
     schedule: { at: trigger, allowWhileIdle: true },
     extra: { taskId: task.id, date: task.date },
   };
@@ -208,7 +221,12 @@ export async function syncNativeReminders(
       (item) => !pendingById.has(item.id) || droppedIds.has(item.id),
     );
     if (add.length > 0) {
-      await LocalNotifications.schedule({ notifications: add });
+      const result = await LocalNotifications.schedule({ notifications: add });
+      if (result.warning) {
+        throw new Error(
+          `${result.warning.code}: ${result.warning.message}`,
+        );
+      }
     }
 
     lastError = "";
@@ -242,23 +260,37 @@ export async function sendTestNotification(delayMs = 10_000): Promise<boolean> {
     await LocalNotifications.cancel({
       notifications: [{ id: 999_999 }],
     }).catch(() => undefined);
-    await LocalNotifications.schedule({
+    const result = await LocalNotifications.schedule({
       notifications: [
         {
           id: 999_999,
           title: "Dayflow 测试提醒",
           body: "看到这条，说明锁屏提醒已经打通了。",
           channelId: CHANNEL_ID,
+          isExactMandatory: true,
           schedule: { at: new Date(Date.now() + Math.max(delayMs, 500)), allowWhileIdle: true },
         },
       ],
     });
+    if (result.warning) {
+      throw new Error(
+        `${result.warning.code}: ${result.warning.message}`,
+      );
+    }
+    const pending = await LocalNotifications.getPending();
+    if (!pending.notifications.some((item) => item.id === 999_999)) {
+      throw new Error("系统没有保留这条测试提醒");
+    }
     lastError = "";
     return true;
   } catch (error) {
     lastError = describeError(error);
     return false;
   }
+}
+
+export function lastNotificationError(): string {
+  return lastError;
 }
 
 /** 把权限、渠道、排队情况一次性读出来，贴给开发者就能定位问题。 */

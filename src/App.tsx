@@ -28,6 +28,7 @@ import {
   ensureNativePermission,
   initNativeNotifications,
   isNativeApp,
+  lastNotificationError,
   nativePermissionGranted,
   pendingReminderCount,
   sendTestNotification,
@@ -668,7 +669,11 @@ export default function App() {
     if (isNativeApp()) {
       const granted = await ensureNativePermission();
       if (!granted) {
-        showToast("通知权限被拒绝，请到系统设置里允许 Dayflow 发通知", "error");
+        showToast(
+          lastNotificationError() ||
+            "通知没有真正开启，请同时允许系统通知和「闹钟和提醒」",
+          "error",
+        );
         return;
       }
       setNotificationState("granted");
@@ -708,7 +713,11 @@ export default function App() {
       );
       void pendingReminderCount().then(setReminderCount);
     } else {
-      showToast("发不出去：先允许通知权限，再关掉电池优化", "error");
+      showToast(
+        lastNotificationError() ||
+          "测试提醒没有保留到系统队列，请检查通知权限和「闹钟和提醒」",
+        "error",
+      );
     }
   };
 
