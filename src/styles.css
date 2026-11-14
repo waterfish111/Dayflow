@@ -1669,6 +1669,92 @@ textarea:focus-visible,
   line-height: 1.5;
 }
 
+.notification-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid #dbe6da;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f9f3, #fbfcf8);
+}
+
+.notification-panel.is-enabled {
+  border-color: #cbdccb;
+  background: #f4f8f2;
+}
+
+.notification-summary {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+
+.notification-summary-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d7e3d6;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--accent);
+}
+
+.notification-summary strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notification-summary p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.notification-toggle {
+  flex: 0 0 auto;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #f8fbf7;
+  box-shadow: none;
+}
+
+.notification-toggle:hover {
+  border-color: var(--accent-deep);
+  background: var(--accent-deep);
+  color: #fff;
+}
+
+.notification-toggle.is-enabled {
+  border-color: #cbdccb;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--accent-deep);
+}
+
+.notification-toggle.is-enabled:hover {
+  border-color: #b8cfba;
+  background: #fff;
+}
+
+.notification-toggle:disabled {
+  opacity: 0.7;
+}
+
+.notification-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin: -2px 4px 10px;
+}
+
 .settings-actions {
   display: flex;
   flex-direction: column;
@@ -1692,13 +1778,6 @@ textarea:focus-visible,
 
 .settings-link:hover {
   color: var(--accent);
-}
-
-.settings-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
 }
 
 .settings-diagnostics {
@@ -2421,6 +2500,21 @@ textarea:focus-visible,
 
   .settings-inline .field:last-child:nth-child(odd) {
     grid-column: 1 / -1;
+  }
+
+  .notification-panel {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notification-toggle {
+    width: 100%;
+  }
+
+  .notification-tools {
+    justify-content: flex-start;
+    margin-top: 0;
   }
 
   .block-row {

@@ -91,6 +91,22 @@ export function SettingsPanel({
   const [showKey, setShowKey] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const importInputRef = useRef<HTMLInputElement>(null);
+  const notificationEnabled = notificationState === "granted";
+  const notificationUnsupported = notificationState === "unsupported";
+  const notificationTitle = notificationEnabled
+    ? nativeApp
+      ? "系统提醒已开启"
+      : "浏览器通知已开启"
+    : notificationUnsupported
+      ? "当前环境不支持通知"
+      : "让 Dayflow 在合适的时候提醒你";
+  const notificationDetail = nativeApp
+    ? notificationEnabled
+      ? reminderCount === null
+        ? "任务开始前 10 分钟提醒，免打扰时段会自动延后。"
+        : `已排入 ${reminderCount} 条系统提醒，免打扰时段会自动延后。`
+      : "开启后会通过系统通知提醒任务，锁屏时也能收到。"
+    : "每天汇总今天的任务，固定日程和截止任务提前两小时提醒。";
 
   useEffect(() => {
     if (!open) return;
@@ -297,48 +313,63 @@ export function SettingsPanel({
           <div className="settings-section-head">
             <div>
               <h3>提醒</h3>
-              <p>
-                {nativeApp
-                  ? "任务开始前 10 分钟用系统通知提醒，锁屏也会响。"
-                  : "每天汇总今天的任务；固定日程和截止任务提前两小时提醒。"}
-              </p>
-            </div>
-            <div className="settings-actions">
-              <button
-                type="button"
-                className="button button--ghost button--small"
-                onClick={onEnableNotifications}
-              >
-                <Icon name="bell" size={15} />
-                {notificationState === "granted"
-                  ? "通知已开启"
-                  : notificationState === "unsupported"
-                    ? "浏览器不支持"
-                    : "开启系统通知"}
-              </button>
-              {nativeApp ? (
-                <div className="settings-links">
-                  <button
-                    type="button"
-                    className="settings-link"
-                    onClick={() => onTestNotification(1_000)}
-                  >
-                    立即测试
-                  </button>
-                  <button
-                    type="button"
-                    className="settings-link"
-                    onClick={() => onTestNotification(10_000)}
-                  >
-                    10 秒后测试
-                  </button>
-                  <button type="button" className="settings-link" onClick={onDiagnose}>
-                    诊断
-                  </button>
-                </div>
-              ) : null}
+              <p>统一管理每日汇总、截止时间和任务开始提醒。</p>
             </div>
           </div>
+
+          <div
+            className={`notification-panel ${
+              notificationEnabled ? "is-enabled" : ""
+            }`}
+          >
+            <div className="notification-summary">
+              <span className="notification-summary-icon">
+                <Icon name="bell" size={17} />
+              </span>
+              <div>
+                <strong>{notificationTitle}</strong>
+                <p>{notificationDetail}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`button button--small notification-toggle ${
+                notificationEnabled ? "is-enabled" : ""
+              }`}
+              onClick={onEnableNotifications}
+              disabled={notificationUnsupported}
+            >
+              <Icon name="bell" size={15} />
+              {notificationEnabled
+                ? "通知已开启"
+                : notificationUnsupported
+                  ? "浏览器不支持"
+                  : "开启系统通知"}
+            </button>
+          </div>
+
+          {nativeApp ? (
+            <div className="notification-tools">
+              <button
+                type="button"
+                className="settings-link"
+                onClick={() => onTestNotification(1_000)}
+              >
+                立即测试
+              </button>
+              <button
+                type="button"
+                className="settings-link"
+                onClick={() => onTestNotification(10_000)}
+              >
+                10 秒后测试
+              </button>
+              <button type="button" className="settings-link" onClick={onDiagnose}>
+                诊断通知
+              </button>
+            </div>
+          ) : null}
+
           <div className="settings-inline">
             <label className="field">
               <span>每日汇总</span>

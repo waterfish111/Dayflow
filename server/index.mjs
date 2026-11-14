@@ -20,6 +20,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const app = express();
 const port = Number(process.env.PORT || 5173);
+const scriptSourcePolicy =
+  process.env.NODE_ENV === "production"
+    ? "script-src 'self'"
+    : "script-src 'self' 'unsafe-inline'";
 
 app.disable("x-powered-by");
 
@@ -43,7 +47,7 @@ app.use((req, res, next) => {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self'",
+      scriptSourcePolicy,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
